@@ -207,7 +207,8 @@ scenes.lobby = {
     $panel.innerHTML = `<div class="row">
       <button class="big" data-a="go" data-v="slots">Tragaperras</button>
       <button class="big" data-a="go" data-v="race">Carreras</button>
-      <button class="big" data-a="go" data-v="dice">Dados</button></div>
+      <button class="big" data-a="go" data-v="dice">Dados</button>
+      <button class="big" data-a="go" data-v="roulette">Ruleta</button></div>
       ${loanRow()}
       <div class="row"><button class="small" data-a="reset">Reiniciar partida</button></div>`;
   },
@@ -472,6 +473,109 @@ scenes.dice = {
   }
 };
 
+// Roulette (European, single zero)
+const R_ORDER = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
+const R_RED = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+const rColor = n => n === 0 ? 'green' : R_RED.has(n) ? 'red' : 'black';
+const R_HEX = { green: '#38b764', red: '#e63946', black: '#1a1c2c' };
+const R_BETS = {
+  red: { label: 'Rojo', mult: 2, ok: n => rColor(n) === 'red' },
+  black: { label: 'Negro', mult: 2, ok: n => rColor(n) === 'black' },
+  even: { label: 'Par', mult: 2, ok: n => n > 0 && n % 2 === 0 },
+  odd: { label: 'Impar', mult: 2, ok: n => n % 2 === 1 },
+  low: { label: '1-18', mult: 2, ok: n => n >= 1 && n <= 18 },
+  high: { label: '19-36', mult: 2, ok: n => n >= 19 },
+  d1: { label: '1-12', mult: 3, ok: n => n >= 1 && n <= 12 },
+  d2: { label: '13-24', mult: 3, ok: n => n >= 13 && n <= 24 },
+  d3: { label: '25-36', mult: 3, ok: n => n >= 25 },
+  pleno: { label: 'Pleno', mult: 36, ok: (n, c) => n === c.num }
+};
+const R_STEP = Math.PI * 2 / 37, R_CX = 106, R_CY = 90, R_R = 76;
+scenes.roulette = {
+  t: 0, choice: { type: 'red', num: 17 }, spinT: 0, dur: 5, w0: 0, wEnd: 0, ang: 0, ballR: 69, ballA: 0,
+  result: null, hist: [], pend: null,
+  enter() { say('Elige tu apuesta y pulsa GIRAR. El cero pierde todo.'); this.panel(); },
+  panel() {
+    const c = this.choice, dis = S.busy ? 'disabled' : '';
+    $panel.innerHTML = betRow() + '<div class="row"><span class="label">TU APUESTA (rojo/negro/par/impar/mitad x2, docena x3, pleno x36)</span>' +
+      Object.entries(R_BETS).filter(([k]) => k !== 'pleno').map(([k, b]) =>
+        `<button data-a="rpick" data-v="${k}" class="${c.type === k ? 'sel' : ''}" ${dis}>${b.label}</button>`).join('') +
+      `<button data-a="rpick" data-v="pleno" class="${c.type === 'pleno' ? 'sel' : ''}" ${dis}>Pleno</button>
+      <input id="rnum" type="number" min="0" max="36" value="${c.num}" ${dis} style="width:64px;font:inherit;padding:8px;background:#1a1c2c;color:#f4f4f4;border:3px solid #f4f4f4"></div>
+      <div class="row"><button class="big go" data-a="rspin" ${S.busy || S.coins < S.bet ? 'disabled' : ''}>Girar</button></div>
+      ${loanRow()}${backRow()}`;
+  },
+  spin() {
+    if (S.busy || S.coins < S.bet) return;
+    const inp = document.getElementById('rnum');
+    if (inp) this.choice.num = Math.min(36, Math.max(0, parseInt(inp.value, 10) || 0));
+    S.busy = true; setCoins(S.coins - S.bet);
+    this.pend = Math.floor(Math.random() * 37); this.result = null;
+    this.spinT = 0; this.w0 = this.ang; this.wEnd = this.w0 + Math.PI * 2 * 3;
+    say('No va mas...'); this.panel();
+  },
+  finish() {
+    const n = this.pend, c = this.choice, b = R_BETS[c.type];
+    this.result = n; this.hist.unshift(n); this.hist = this.hist.slice(0, 8);
+    if (b.ok(n, c)) { const win = S.bet * b.mult; setCoins(S.coins + win); jingle(); say(`Salio ${n} ${rColor(n)}. Ganas ${win} monedas!`); }
+    else { sad(); say(`Salio ${n} ${rColor(n)}. Perdiste ${S.bet}.`); }
+    S.busy = false; this.pend = null; this.panel();
+  },
+  update(dt) {
+    this.t += dt;
+    if (this.pend === null) {
+      this.ang += dt * 0.15;
+      if (this.result !== null) this.ballA = this.ang + R_ORDER.indexOf(this.result) * R_STEP; // ball rides with its pocket
+      return;
+    }
+    this.spinT += dt;
+    const k = Math.min(1, this.spinT / this.dur), e = 1 - Math.pow(1 - k, 2);
+    this.ang = this.w0 + (this.wEnd - this.w0) * e;
+    const idx = R_ORDER.indexOf(this.pend);
+    // ball orbits against the wheel, then drops into the winning pocket
+    const off = -(1 - Math.pow(k, 0.6)) * Math.PI * 2 * 7;
+    this.ballA = this.ang + idx * R_STEP + off;
+    this.ballR = 69 - 9 * Math.pow(Math.max(0, (k - 0.7) / 0.3), 2);
+    if (Math.floor(this.spinT * 18) !== Math.floor((this.spinT - dt) * 18) && k < 0.9) beep(1200, 0.015, 'square', 0.01);
+    if (k >= 1) this.finish();
+  },
+  draw() {
+    rect(0, 0, W, H, '#1a1c2c'); box(4, 4, W - 8, H - 8, '#257179', '#8b5a2b');
+    for (let y = -R_R; y <= R_R; y++) for (let x = -R_R; x <= R_R; x++) {
+      const d = Math.sqrt(x * x + y * y); if (d > R_R) continue;
+      let col;
+      if (d > 70) col = '#8b5a2b';
+      else if (d > 68) col = '#566c86';
+      else if (d > 52) {
+        const a = Math.atan2(y, x) - this.ang;
+        const i = Math.floor(mod(a + R_STEP / 2, Math.PI * 2) / R_STEP);
+        col = R_HEX[rColor(R_ORDER[i])];
+        if (d < 54 || (mod(a + R_STEP / 2, Math.PI * 2) / R_STEP) % 1 < 0.06) col = '#ffd23f';
+      } else if (d > 20) col = '#333c57';
+      else if (d > 6) col = '#b13e53';
+      else col = '#ffd23f';
+      rect(R_CX + x, R_CY + y, 1, 1, col);
+    }
+    // spokes
+    for (let i = 0; i < 4; i++) { const a = this.ang + i * Math.PI / 2; for (let r = 7; r < 20; r++) rect(R_CX + Math.cos(a) * r, R_CY + Math.sin(a) * r, 2, 2, '#ffd23f'); }
+    const bx = R_CX + Math.cos(this.ballA) * this.ballR, by = R_CY + Math.sin(this.ballA) * this.ballR;
+    rect(bx - 1, by - 1, 3, 3, '#f4f4f4'); rect(bx, by, 1, 1, '#cbd5e1');
+    // right side: result + history
+    txt('RULETA', 240, 14, '#ffd23f', 12, 'center', '#e63946');
+    if (this.result !== null && this.pend === null) {
+      box(212, 38, 56, 44, R_HEX[rColor(this.result)], '#f4f4f4');
+      txt(String(this.result), 240, 52, '#f4f4f4', 16, 'center');
+    } else box(212, 38, 56, 44, '#333c57', '#f4f4f4');
+    txt('Ultimos', 240, 94, '#94b0c2', 8, 'center');
+    this.hist.forEach((n, i) => {
+      const x = 196 + (i % 4) * 24, y = 108 + Math.floor(i / 4) * 22;
+      box(x, y, 20, 18, R_HEX[rColor(n)], '#f4f4f4'); txt(String(n), x + 10, y + 5, '#f4f4f4', 8, 'center');
+    });
+    const b = R_BETS[this.choice.type];
+    txt(`${b.label}${this.choice.type === 'pleno' ? ' ' + this.choice.num : ''} | ${S.bet}`, 240, 156, '#73eff7', 8, 'center');
+  }
+};
+
 // ---------- Scene manager & input ----------
 function goto(name) {
   S.scene = name; scenes[name].enter();
@@ -486,10 +590,17 @@ function act(a, v) {
   else if (a === 'pick') { sc.pick = +v; sc.panel(); }
   else if (a === 'start') sc.start();
   else if (a === 'roll') sc.start(v);
+  else if (a === 'rpick') { sc.choice.type = v; sc.panel(); }
+  else if (a === 'rspin') sc.spin();
 }
 $panel.addEventListener('click', e => {
   const b = e.target.closest('button[data-a]');
   if (b && !b.disabled) act(b.dataset.a, b.dataset.v);
+});
+
+$panel.addEventListener('change', e => {
+  if (e.target.id !== 'rnum') return;
+  const r = scenes.roulette; r.choice.num = Math.min(36, Math.max(0, parseInt(e.target.value, 10) || 0)); r.choice.type = 'pleno'; r.panel();
 });
 
 let last = performance.now();
