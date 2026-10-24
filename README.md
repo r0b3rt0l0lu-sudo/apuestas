@@ -1,10 +1,13 @@
-# Pixel Casino
+# La Última Feria
 
-Juego de apuestas en pixel art (monedas virtuales, sin dinero real). Abre `index.html` en el navegador.
+Roguelite de apuestas de terror para navegador (fichas ficticias, sin dinero real). Ver [CLAUDE.md](CLAUDE.md) para el diseño completo.
 
-- **Tragaperras**: 3 rodillos, premios hasta x50.
-- **Carreras**: 4 caballos con cuotas calculadas por simulacion; cada carrera tiene "forma del dia" aleatoria.
-- **Dados**: apuesta a suma baja, siete o alta.
-- **Ruleta**: europea (37 casillas), apuestas a color, par/impar, mitades, docenas y pleno (x36).
+```bash
+npm install
+npm run dev        # servidor de desarrollo
+npm run build      # build estático en dist/
+npm run test       # Vitest
+npm run typecheck && npm run lint
+```
 
-El saldo se guarda en `localStorage`. Si te quedas sin monedas puedes pedir un prestamo o reiniciar.
+TypeScript estricto + Vite + Phaser 3. La lógica (`src/core`, `src/games`) es TypeScript puro y está testeada; las escenas (`src/scenes`) solo la animan.

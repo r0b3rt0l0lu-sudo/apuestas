@@ -438,3 +438,18 @@ Si un hito resulta demasiado grande, divídelo, pero no cambies el orden.
 - La partida guardada sobrevive a recargar la página a mitad de una noche.
 - Los tests cubren: transiciones de estado, pagos de cada mesa, frecuencias de las carreras, IA del duelo y reproducibilidad por semilla.
 - `npm run build` genera un `dist/` estático que funciona servido desde cualquier hosting de archivos.
+
+---
+
+## 13. Estado de la implementación (notas de desarrollo)
+
+Desviaciones y decisiones tomadas al implementar; revisar si alguna no encaja:
+
+- **Phaser 3.90** (no 4): el documento pide Phaser 3.
+- **Pixel art por código, sin hojas PNG** (`src/art/*.ts`): cada sprite se dibuja píxel a píxel con un lienzo (`Painter`) y se registra como textura al arrancar. No hay Aseprite ni PNG en `src/art/`; si se quieren hojas reales, hay que volcar esos mapas.
+- **Skins `porcelana` y `trapo`**: dibujadas (`skin-<nombre>-<0|1>`) pero no se usan en ninguna carrera; la octava skin (silueta tras superar la noche 7) no está diseñada.
+- **Audio sintetizado** (`src/audio/sfx.ts`): efectos y ambientes se generan con WebAudio; no hay archivos de sonido ni rutas inventadas. El bajado de volumen del ambiente durante los diálogos (`setDuck`) existe pero no se llama todavía.
+- **Fase `dawn` al llegar a la cuota**: con la cuota cubierta y acciones por gastar, la partida sigue en `hub`/`playing` y `quotaMet()` habilita «Esperar al amanecer» (acción `sleep`). La fase `dawn` empieza al dormir o cuando ya no se puede jugar. Cubierto en `tests/core.test.ts`.
+- **`RunState` ampliado** con `rng` (estado del RNG, para reproducir la partida al recargar) y `forgiven` (duelo ganado: cuota perdonada esa noche).
+- El duelo no se guarda a mitad: al recargar en fase `duel` empieza un duelo nuevo con la misma semilla.
+- `?debug` en la URL expone `window.__game` y `window.__session` para pruebas de humo.
