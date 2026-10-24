@@ -1,0 +1,162 @@
+import { describe, expect, it } from 'vitest';
+import { canPlayAny } from '../src/core/economy';
+import { cursesFor, nightDef } from '../src/core/nights';
+import { Rng } from '../src/core/rng';
+import { DEFAULT_OPTIONS, clearRun, loadOptions, loadRun, saveRun } from '../src/core/save';
+import { type RunState, apply, newRun, quotaMet } from '../src/core/state';
+
+const mem = () => {
+  const m = new Map<string, string>();
+  return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k) };
+};
+const play = (s: RunState, over: Partial<RunState> = {}): RunState => ({ ...apply(s, { type: 'enterTable' }), ...over });
+
+describe('rng', () => {
+  it('es reproducible por semilla', () => {
+    const a = new Rng(42), b = new Rng(42);
+    expect(Array.from({ length: 20 }, () => a.next())).toEqual(Array.from({ length: 20 }, () => b.next()));
+  });
+  it('restaurar el estado continúa la misma secuencia', () => {
+    const a = new Rng(7);
+    a.next();
+    const b = new Rng(a.state);
+    expect(a.next()).toBe(b.next());
+  });
+  it('int respeta los límites y shuffle conserva elementos', () => {
+    const r = new Rng(1);
+    for (let i = 0; i < 500; i++) { const v = r.int(3, 8); expect(v).toBeGreaterThanOrEqual(3); expect(v).toBeLessThanOrEqual(8); }
+    expect(r.shuffle([1, 2, 3, 4]).sort()).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe('noches', () => {
+  it('tabla de cuotas y acciones', () => {
+    expect([1, 2, 3, 4, 5, 6, 7].map((n) => nightDef(n).quota)).toEqual([1000, 2500, 5000, 9000, 15000, 25000, 50000]);
+    expect([1, 2, 3, 4, 5, 6, 7].map((n) => nightDef(n).actions)).toEqual([20, 20, 18, 18, 16, 16, 14]);
+  });
+  it('las maldiciones se acumulan y la 7 las junta todas', () => {
+    expect(cursesFor(2)).toEqual([]);
+    expect(cursesFor(3)).toEqual(['slotReel3']);
+    expect(cursesFor(5)).toEqual(['slotReel3', 'doubleZero', 'widowFast']);
+    expect(cursesFor(7)).toHaveLength(4);
+  });
+});
+
+describe('transiciones de estado', () => {
+  it('noche 1: 500 fichas, 20 acciones, en el pasillo', () => {
+    const s = newRun(1);
+    expect(s).toMatchObject({ night: 1, balance: 500, actionsLeft: 20, phase: 'hub' });
+  });
+  it('resolve descuenta apuesta y acciones y suma el pago', () => {
+    const s = apply(play(newRun(1)), { type: 'resolve', game: 'slots', bet: 100, payout: 300, rng: 5 });
+    expect(s).toMatchObject({ balance: 700, actionsLeft: 19, rng: 5 });
+    const r = apply(play(newRun(1)), { type: 'resolve', game: 'roulette', bet: 50, payout: 0, rng: 6 });
+    expect(r).toMatchObject({ balance: 450, actionsLeft: 18 });
+    const c = apply(play(newRun(1)), { type: 'resolve', game: 'race', bet: 100, payout: 0, rng: 6 });
+    expect(c.actionsLeft).toBe(17);
+  });
+  it('rechaza apuestas ilegales o sin saldo/acciones', () => {
+    const s = play(newRun(1));
+    expect(apply(s, { type: 'resolve', game: 'slots', bet: 77, payout: 0, rng: 1 })).toBe(s);
+    expect(apply(play(s, { balance: 40 }), { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 }).balance).toBe(40);
+    expect(apply(play(s, { actionsLeft: 2 }), { type: 'resolve', game: 'race', bet: 100, payout: 0, rng: 1 }).actionsLeft).toBe(2);
+    expect(apply(newRun(1), { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 }).balance).toBe(500); // fuera de mesa
+  });
+  it('sin acciones y sin cuota → duelo', () => {
+    const s = apply(play(newRun(1), { actionsLeft: 1 }), { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 });
+    expect(s.phase).toBe('duel');
+  });
+  it('sin saldo para la apuesta mínima y sin cuota → duelo', () => {
+    const s = apply(play(newRun(1), { balance: 90 }), { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 });
+    expect(s.balance).toBe(40);
+    expect(s.phase).toBe('duel');
+  });
+  it('sin acciones pero con cuota → amanecer', () => {
+    const s = apply(play(newRun(1), { actionsLeft: 1, balance: 1100 }), { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 });
+    expect(s.phase).toBe('dawn');
+  });
+  it('con cuota y acciones se puede seguir o dormir', () => {
+    const s = play(newRun(1), { balance: 1200 });
+    expect(quotaMet(s)).toBe(true);
+    const r = apply(s, { type: 'resolve', game: 'slots', bet: 50, payout: 0, rng: 1 });
+    expect(r.phase).toBe('playing');
+    expect(apply(r, { type: 'sleep' }).phase).toBe('dawn');
+    expect(apply(play(newRun(1)), { type: 'sleep' }).phase).toBe('playing'); // sin cuota no se duerme
+  });
+  it('al amanecer se descuenta la cuota y el resto pasa a la noche siguiente', () => {
+    const dawn = { ...newRun(1), phase: 'dawn' as const, balance: 1700 };
+    const n = apply(dawn, { type: 'nextNight' });
+    expect(n).toMatchObject({ night: 2, balance: 700, actionsLeft: 20, phase: 'hub' });
+    expect(n.history).toEqual([{ night: 1, quota: 1000, balance: 1700, outcome: 'paid' }]);
+  });
+  it('si el arrastre es menor de 300 se completa hasta 300', () => {
+    const n = apply({ ...newRun(1), phase: 'dawn', balance: 1100 }, { type: 'nextNight' });
+    expect(n.balance).toBe(300);
+  });
+  it('ganar el duelo perdona la cuota y conserva el saldo', () => {
+    const duel = { ...newRun(1), phase: 'duel' as const, balance: 200 };
+    const won = apply(duel, { type: 'duelResult', won: true });
+    expect(won.phase).toBe('dawn');
+    const n = apply(won, { type: 'nextNight' });
+    expect(n.balance).toBe(300);
+    const rich = apply(apply({ ...duel, balance: 800 }, { type: 'duelResult', won: true }), { type: 'nextNight' });
+    expect(rich.balance).toBe(800);
+    expect(rich.history[0]?.outcome).toBe('duel');
+    expect(rich.forgiven).toBe(false);
+  });
+  it('perder el duelo es la muerte', () => {
+    expect(apply({ ...newRun(1), phase: 'duel' }, { type: 'duelResult', won: false }).phase).toBe('dead');
+  });
+  it('superar la noche 7 es el final', () => {
+    const s = apply({ ...newRun(1), night: 7, phase: 'dawn', balance: 60000 }, { type: 'nextNight' });
+    expect(s).toMatchObject({ phase: 'ending', balance: 10000 });
+  });
+  it('flag y transiciones fuera de fase no hacen nada', () => {
+    expect(apply(newRun(1), { type: 'flag', key: 'tutorial' }).flags.tutorial).toBe(true);
+    const s = newRun(1);
+    expect(apply(s, { type: 'nextNight' })).toBe(s);
+    expect(apply(s, { type: 'duelResult', won: true })).toBe(s);
+  });
+  it('canPlayAny', () => {
+    expect(canPlayAny(49, 20)).toBe(false);
+    expect(canPlayAny(50, 0)).toBe(false);
+    expect(canPlayAny(50, 1)).toBe(true);
+  });
+});
+
+describe('guardado', () => {
+  it('guarda y recarga', () => {
+    const m = mem();
+    const s = newRun(3);
+    saveRun(s, m);
+    expect(loadRun(m)).toEqual(s);
+    clearRun(m);
+    expect(loadRun(m)).toBeNull();
+  });
+  it('descarta versiones distintas o datos rotos sin lanzar', () => {
+    const m = mem();
+    m.setItem('ultima-feria.run', JSON.stringify({ version: 99, balance: 1 }));
+    expect(loadRun(m)).toBeNull();
+    m.setItem('ultima-feria.run', '{no es json');
+    expect(loadRun(m)).toBeNull();
+  });
+  it('opciones por defecto', () => {
+    expect(loadOptions(mem())).toEqual(DEFAULT_OPTIONS);
+  });
+});
+
+describe('reproducibilidad por semilla', () => {
+  it('la misma semilla y las mismas acciones dan la misma partida', async () => {
+    const { spin } = await import('../src/games/slots');
+    const run = () => {
+      let s = apply(newRun(99), { type: 'enterTable' });
+      for (let i = 0; i < 10; i++) {
+        const rng = new Rng(s.rng);
+        const r = spin(rng, 50);
+        s = apply(s, { type: 'resolve', game: 'slots', bet: 50, payout: r.payout, rng: rng.state });
+      }
+      return s;
+    };
+    expect(run()).toEqual(run());
+  });
+});
