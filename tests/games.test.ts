@@ -245,3 +245,32 @@ describe('duelo', () => {
     });
   });
 });
+
+import { cubicBezier, easeOutBack, wheelEase } from '../src/fx/ease';
+import { phraseCycle } from '../src/core/phrases';
+
+describe('curvas', () => {
+  it('la curva de la rueda va de 0 a 1 de forma monótona', () => {
+    expect(wheelEase(0)).toBe(0);
+    expect(wheelEase(1)).toBe(1);
+    let prev = 0;
+    for (let i = 1; i <= 100; i++) { const v = wheelEase(i / 100); expect(v).toBeGreaterThanOrEqual(prev); prev = v; }
+    expect(wheelEase(0.3)).toBeGreaterThan(0.6); // sale rápido y frena
+  });
+  it('cubicBezier lineal', () => {
+    expect(cubicBezier(0, 0, 1, 1)(0.5)).toBeCloseTo(0.5, 3);
+  });
+  it('easeOutBack se pasa de 1 y vuelve', () => {
+    expect(Math.max(...Array.from({ length: 50 }, (_, i) => easeOutBack(i / 49)))).toBeGreaterThan(1);
+    expect(easeOutBack(1)).toBeCloseTo(1);
+  });
+});
+
+describe('frases', () => {
+  it('no repiten la última', () => {
+    const pick = phraseCycle(new Rng(4));
+    const list = ['a', 'b', 'c'];
+    let last = '';
+    for (let i = 0; i < 100; i++) { const s = pick(list); expect(s).not.toBe(last); last = s; }
+  });
+});
