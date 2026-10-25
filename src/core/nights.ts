@@ -34,3 +34,23 @@ export function cursesFor(night: number): Curse[] {
   if (night >= LAST_NIGHT) return NIGHTS.flatMap((n) => (n.curse ? [n.curse] : []));
   return NIGHTS.slice(0, night).flatMap((n) => (n.curse ? [n.curse] : []));
 }
+
+/** Interés de la hipoteca: se devuelve lo prestado más este porcentaje, sumado a la cuota de esa noche. */
+export const MORTGAGE_RATE = 0.3;
+const MORTGAGE_SHARES = [0.2, 0.4, 0.6] as const;
+
+export interface MortgageOffer {
+  /** Fichas que recibes ahora. */
+  amount: number;
+  /** Fichas que se suman a la cuota de la noche. */
+  owed: number;
+}
+
+/** Ofertas de la noche: un 20 %, 40 % y 60 % de la cuota, redondeadas a 50 fichas. */
+export function mortgageOffers(night: number): MortgageOffer[] {
+  const quota = nightDef(night).quota;
+  return MORTGAGE_SHARES.map((sh) => {
+    const amount = Math.max(50, Math.round((quota * sh) / 50) * 50);
+    return { amount, owed: Math.ceil(amount * (1 + MORTGAGE_RATE)) };
+  });
+}

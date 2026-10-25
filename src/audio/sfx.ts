@@ -67,6 +67,17 @@ class Sfx {
   aim(): void { this.tone(300, 0.2, 'sawtooth', 0.06 * this.vSfx, 0, 120); }
   whisper(): void { for (let i = 0; i < 3; i++) this.noise(0.5, 0.05 * this.vSfx, 2500 + i * 700, i * 0.3, 4, 'bandpass'); }
   ballTick(): void { this.tone(1800 + Math.random() * 300, 0.012, 'square', 0.03 * this.vSfx); }
+  /** Grito del susto: dos dientes de sierra desafinados que suben, ruido áspero y un golpe grave. */
+  scream(): void {
+    const v = this.vSfx;
+    this.tone(520, 1.1, 'sawtooth', 0.22 * v, 0, 900);
+    this.tone(557, 1.1, 'sawtooth', 0.2 * v, 0, 1000);
+    this.tone(1180, 0.9, 'square', 0.08 * v, 0.05, -500);
+    this.noise(0.9, 0.35 * v, 2600, 0, 0.8, 'highpass');
+    this.tone(55, 0.7, 'sine', 0.4 * v, 0, -20);
+  }
+  /** Golpe seco (agarrón, caída). */
+  thud(): void { this.tone(70, 0.35, 'sine', 0.35 * this.vSfx, 0, -35); this.noise(0.25, 0.18 * this.vSfx, 500); }
   lighter(): void { this.tone(2600, 0.03, 'square', 0.06 * this.vSfx); this.noise(0.3, 0.08 * this.vSfx, 3200, 0.06, 1, 'highpass'); }
   drag(): void {
     this.noise(1.1, 0.1 * this.vSfx, 1800, 0, 0.8, 'bandpass');

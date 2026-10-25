@@ -6,6 +6,7 @@ import { Death3D } from './stages/Death3D';
 import { Duel3D } from './stages/Duel3D';
 import { Ending3D } from './stages/Ending3D';
 import { Hub3D } from './stages/Hub3D';
+import { Intro3D, needsIntro } from './stages/Intro3D';
 import { Race3D } from './stages/Race3D';
 import { Roulette3D } from './stages/Roulette3D';
 import { Slots3D } from './stages/Slots3D';
@@ -18,7 +19,7 @@ export function goPhase(): void {
     case 'dawn': void engine.go(() => new Dawn3D()); break;
     case 'dead': void engine.go(() => new Death3D()); break;
     case 'ending': void engine.go(() => new Ending3D()); break;
-    default: void engine.go(() => new Hub3D());
+    default: void engine.go(() => (needsIntro() ? new Intro3D() : new Hub3D()));
   }
 }
 

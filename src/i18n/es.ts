@@ -34,13 +34,39 @@ export const T = {
     slots: 'Tragaperras',
     roulette: 'Ruleta',
     race: 'Carreras de caballitos',
+    mortgage: 'Hipoteca',
     cost: (c: number, min: number) => `${c} ${c === 1 ? 'acción' : 'acciones'} · apuesta mínima ${fmt(min)}`,
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
     quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
-    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F o Intro: entrar en la mesa · E: fumar · 1, 2, 3: mesas',
+    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F o Intro: usar · E: fumar · 1, 2, 3: mesas · 4: hipoteca',
     use: (name: string) => `[F] ${name}`,
     smoke: ['«Fuma. Te queda poco tiempo y mucho humo.»', '«Esa tos no es del tabaco.»', '«Todo se consume, igual que tu cuota.»']
+  },
+
+  intro: {
+    sign: ['CASINO', 'ABIERTO · 24 H'],
+    goal: 'Entra en el casino.',
+    inside: 'Está demasiado silencioso…',
+    controls: 'WASD o flechas: moverte · clic en la escena: mirar con el ratón (Esc lo suelta) · E: fumar',
+    skip: 'Saltar',
+    hello: '¿Hola?',
+    late: '«Llegas tarde.»',
+    abducted: ['…', '«Bienvenido a la última feria.»', '«Llegas justo a tiempo para pagar.»']
+  },
+
+  mortgage: {
+    title: 'LA HIPOTECA',
+    body: [
+      '«¿Cortos de fichas? Firma aquí. Te adelanto lo que pidas.»',
+      'Recibes las fichas ahora y devuelves lo prestado más un 30 %, sumado a la cuota de esta noche. Solo una vez por noche. Si ganas el duelo, la deuda se perdona.'
+    ],
+    option: (amount: number, owed: number) => `Pedir ${fmt(amount)} · devolver ${fmt(owed)}`,
+    cancel: 'Mejor no',
+    hint: 'pide fichas prestadas',
+    done: 'Ya hipotecaste esta noche',
+    refuse: '«Ya firmaste esta noche. Una deuda a la vez.»',
+    signed: (amount: number, owed: number) => `«Firmado. ${fmt(amount)} fichas tuyas. ${fmt(owed)} mías.»`
   },
 
   tutorial: [
@@ -74,7 +100,7 @@ export const T = {
     title: 'TRAGAPERRAS',
     pull: 'Tirar de la palanca',
     paytable: 'Tres iguales',
-    twoEyes: 'Dos ojos: te devuelve la apuesta',
+    twoEyes: 'Dos iguales: te devuelve la apuesta',
     names: { ojo: 'Ojo', diente: 'Diente', polilla: 'Polilla', llave: 'Llave', calavera: 'Calavera', siete: 'Siete' } as Record<string, string>,
     bet: 'Apuesta',
     back: 'Volver al pasillo'

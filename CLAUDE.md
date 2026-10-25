@@ -128,6 +128,7 @@ interface RunState {
   - Quedan 0 acciones, o no hay saldo suficiente para la apuesta mínima de ninguna mesa, y no se llega → fase `duel`.
 - Si se gana el duelo, la cuota se perdona, el saldo queda como estaba y se pasa a `dawn`.
 - Si se pierde el duelo → `dead`. Se borra la partida guardada y se vuelve a la noche 1.
+- **Hipoteca** (`mortgage`, solo en el pasillo y una vez por noche): recibes ahora el 20 %, 40 % o 60 % de la cuota (redondeado a 50) y esa cantidad más un 30 % se suma a la cuota de esa noche (`RunState.debt`, `mortgaged`). Se paga al amanecer con la cuota; si ganas el duelo se perdona entera. La noche siguiente empieza sin deuda.
 - Guarda tras **cada** acción resuelta. Si al cargar la versión no coincide, descarta el guardado sin romper el juego.
 
 Todas las transiciones son funciones puras en `core/state.ts`, del tipo `apply(state, action) => state`. Necesitan tests.
@@ -171,7 +172,7 @@ Los costes en acciones obligan a elegir: la tragaperras es barata y de poco ries
   | calavera | 2 | ×25 |
   | siete oxidado | 1 | ×50 |
 
-- Dos ojos en cualquier posición de la línea: ×1 (te devuelve la apuesta).
+- Cualquier pareja (dos símbolos iguales en cualquier posición de la línea): ×1 (te devuelve la apuesta). Con esto el retorno medio es ≈ 74 % (antes solo los pares de ojos devolvían la apuesta: ≈ 44 %).
 - Animación: los rodillos paran escalonados a los 900, 1400 y 2100 ms.
 - Expresión del Cobrador: `sonrisa` cuando pierdes, `cobra` si te quedan 3 acciones o menos y no llegas a la cuota, `acecho` en el resto de casos.
 
@@ -193,15 +194,15 @@ Los costes en acciones obligan a elegir: la tragaperras es barata y de poco ries
 
   | Nº | Nombre | Skin | Paga | Probabilidad de ganar |
   |---|---|---|---|---|
-  | 1 | Ceniza | `clasico` (`#BFB8A8`, crin `#5E5640`) | ×3 | 0,29 |
-  | 2 | Óxido | `clasico` (`#A0603A`, crin `#4A2A16`) | ×4 | 0,22 |
-  | 3 | Hueso | `esqueleto` | ×5 | 0,17 |
-  | 4 | Brasa | `quemado` | ×6 | 0,14 |
-  | 5 | Ahogada | `ahogado` | ×8 | 0,11 |
-  | 6 | Viuda | `luto` | ×12 | 0,07 |
+  | 1 | Ceniza | `clasico` (`#BFB8A8`, crin `#5E5640`) | ×3,3 | 0,29 |
+  | 2 | Óxido | `clasico` (`#A0603A`, crin `#4A2A16`) | ×4,4 | 0,22 |
+  | 3 | Hueso | `esqueleto` | ×5,5 | 0,17 |
+  | 4 | Brasa | `quemado` | ×6,6 | 0,14 |
+  | 5 | Ahogada | `ahogado` | ×8,8 | 0,11 |
+  | 6 | Viuda | `luto` | ×13,2 | 0,07 |
 
 - **No uses tiempos uniformes:** con ellos todos ganarían igual y las cuotas no tendrían sentido. La probabilidad de cada uno es proporcional a la inversa de su pago.
-  - Con estos pagos, cada apuesta devuelve de media un 85 %, sea cual sea el caballo. La casa se queda con un margen del 15 %.
+  - Con estos pagos (el 10 % más altos que los originales), cada apuesta devuelve de media entre un 92 % y un 97 %, según el caballo. La casa se queda con un margen de ~5 %.
   - Primero se sortea el ganador con esos pesos; después se generan tiempos coherentes con ese orden.
   - Escribe un test que simule 100.000 carreras y compruebe esas frecuencias (±1 %).
 - Cada caballo tiene una curva de velocidad distinta para que haya adelantamientos visibles.
@@ -473,3 +474,7 @@ Desviaciones y decisiones tomadas al implementar; revisar si alguna no encaja:
   - No verificado: rendimiento en GPU real y audio (probado solo en Chromium headless con SwiftShader). Quedan por pulir: aspecto de la tragaperras en el pasillo, iluminación del duelo y postes del tiovivo en las carreras.
   - **Pasillo explorable (`Hub3D`):** el pasillo es una sala de ladrillo en primera persona con la tragaperras, la ruleta y un tiovivo con seis caballitos modelados con cajas, y El Cobrador tras su mostrador al fondo. Te mueves con WASD o flechas (flechas izq./der. giran; arrastrar el ratón mira), con colisiones por cajas. Al acercarte a una mesa aparece «[F] …» y F, Intro, Espacio o un clic entran; 1, 2 y 3 van directos a cada mesa. El ratón se captura con un clic en la sala (Esc lo suelta; si no se puede, se mira arrastrando). La tecla E saca y enciende un cigarro en primera persona (`r3/cigarette.ts`) usando el modelo `src/assets/Cigarette.fbx` aportado por el usuario (se incrusta en el JS con `?inline` y se carga con `FBXLoader`; se reorienta por código, el cuerpo se acorta al fumar y la pieza pequeña de la punta se desplaza con él; el `.blend` de humo volumétrico no se usa, el humo son sprites): mano, brasa que brilla al dar la calada, ceniza que acorta el cigarro, humo en el mundo y una frase del Cobrador al acabarlo; no afecta a la partida. La posición se recuerda al volver de una mesa (`saved`, por noche). «Esperar al amanecer» sigue siendo un botón (tecla Z).
   - **Entrada y título:** el diálogo del pasillo (tutorial incluido) avanza solo y nunca bloquea moverse ni entrar en una mesa; carteles flotantes sobre cada mesa y aviso «[F] …» a menos de 2,6 de su borde. Título rehecho: título con letras que parpadean y glitch irregular de 150 ms (sin desplazamiento con «reducir destellos»), menú en columna, noria, polillas, brasas, farola que parpadea y paralaje con el puntero.
+  - **Cambios de equilibrio (a petición del usuario):** tragaperras con pareja = apuesta devuelta (RTP ≈ 74 %) y pagos de las carreras ×1,1 (RTP 92-97 %). La ruleta europea no se toca (es justa: ≈ 97 %). Hay tests de retorno medio para las tres.
+  - **Hipoteca en el pasillo:** el mostrador del Cobrador es una cuarta «mesa» (cartel, `[F]` o tecla 4) que abre un diálogo con las tres ofertas (`mortgageOffers` en `core/nights.ts`).
+  - **Jumpscare al morir (`Death3D`):** tras apagarse la vela se corta a negro un instante y la cara del Cobrador llena la pantalla con un grito sintetizado (`sfx.scream`), destello rojo y temblor; luego sigue el título. Con «reducir destellos» se mantiene la imagen y el sonido pero sin temblor y con destello suavizado (lo decide `Engine`).
+  - **Prólogo en el casino (`Intro3D`):** una partida nueva empieza en el parking de un casino (coches, farolas, cartel de neón); caminas hasta la puerta, entras al vestíbulo con tragaperras y ruleta y, al pasar de cierto punto, se apagan las luces, el Cobrador aparece a destellos cada vez más cerca, unas manos te agarran y se corta a negro con un texto antes de despertar en el pasillo. Se ve una vez (`flags.casino`); hay botón «Saltar» (tecla K). `FpsControls` (`r3/fps.ts`) es el control de primera persona compartido con `Hub3D`.

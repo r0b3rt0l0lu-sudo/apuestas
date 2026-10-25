@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { canPlayAny } from '../src/core/economy';
-import { cursesFor, nightDef } from '../src/core/nights';
+import { MORTGAGE_RATE, cursesFor, mortgageOffers, nightDef } from '../src/core/nights';
 import { Rng } from '../src/core/rng';
 import { DEFAULT_OPTIONS, clearRun, loadOptions, loadRun, saveRun } from '../src/core/save';
-import { type RunState, apply, newRun, quotaMet } from '../src/core/state';
+import { type RunState, apply, canMortgage, newRun, quotaMet, quotaOf } from '../src/core/state';
 
 const mem = () => {
   const m = new Map<string, string>();
@@ -124,7 +124,47 @@ describe('transiciones de estado', () => {
   });
 });
 
+describe('hipoteca', () => {
+  it('las ofertas son el 20, 40 y 60 % de la cuota, con interés', () => {
+    expect(mortgageOffers(1)).toEqual([{ amount: 200, owed: 260 }, { amount: 400, owed: 520 }, { amount: 600, owed: 780 }]);
+    expect(MORTGAGE_RATE).toBe(0.3);
+  });
+  it('da las fichas ahora y suma lo adeudado a la cuota de la noche', () => {
+    const s = apply(newRun(1), { type: 'mortgage', amount: 400 });
+    expect(s).toMatchObject({ balance: 900, debt: 520, mortgaged: true });
+    expect(quotaOf(s)).toBe(1520);
+    expect(quotaMet({ ...s, balance: 1519 })).toBe(false);
+    expect(quotaMet({ ...s, balance: 1520 })).toBe(true);
+  });
+  it('solo una por noche, solo en el pasillo y solo con cantidades ofrecidas', () => {
+    const s = apply(newRun(1), { type: 'mortgage', amount: 200 });
+    expect(canMortgage(s)).toBe(false);
+    expect(apply(s, { type: 'mortgage', amount: 200 })).toBe(s);
+    expect(apply(newRun(1), { type: 'mortgage', amount: 123 }).mortgaged).toBe(false);
+    expect(apply(play(newRun(1)), { type: 'mortgage', amount: 200 }).mortgaged).toBe(false);
+  });
+  it('al amanecer se paga la cuota con la deuda y la noche siguiente empieza limpia', () => {
+    const s = { ...apply(newRun(1), { type: 'mortgage', amount: 200 }), phase: 'dawn' as const, balance: 1500 };
+    const n = apply(s, { type: 'nextNight' });
+    expect(n).toMatchObject({ night: 2, balance: 300, debt: 0, mortgaged: false }); // 1500 - 1260 = 240, completado hasta 300
+    expect(n.history[0]).toMatchObject({ quota: 1260, outcome: 'paid' });
+  });
+  it('ganar el duelo perdona también la deuda', () => {
+    const s = { ...apply(newRun(1), { type: 'mortgage', amount: 600 }), phase: 'duel' as const };
+    const n = apply(apply(s, { type: 'duelResult', won: true }), { type: 'nextNight' });
+    expect(n).toMatchObject({ night: 2, balance: 1100, debt: 0 });
+  });
+});
+
 describe('guardado', () => {
+  it('un guardado anterior a la hipoteca se completa sin romper', () => {
+    const m = mem();
+    const old: Partial<RunState> = { ...newRun(3) };
+    delete old.debt;
+    delete old.mortgaged;
+    m.setItem('ultima-feria.run', JSON.stringify(old));
+    expect(loadRun(m)).toMatchObject({ debt: 0, mortgaged: false });
+  });
   it('guarda y recarga', () => {
     const m = mem();
     const s = newRun(3);

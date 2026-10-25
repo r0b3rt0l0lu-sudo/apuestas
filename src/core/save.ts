@@ -30,7 +30,8 @@ export function loadRun(s: Store | null = store()): RunState | null {
     const data = JSON.parse(raw) as Partial<RunState>;
     // Si la versión no coincide se descarta sin romper nada.
     if (data.version !== SAVE_VERSION || typeof data.balance !== 'number') return null;
-    return data as RunState;
+    // Guardados anteriores a la hipoteca: se completan los campos nuevos.
+    return { ...data, debt: data.debt ?? 0, mortgaged: data.mortgaged ?? false, forgiven: data.forgiven ?? false } as RunState;
   } catch {
     return null;
   }

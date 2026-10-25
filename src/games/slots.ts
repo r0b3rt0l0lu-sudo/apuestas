@@ -16,7 +16,8 @@ export interface SlotResult {
 export function payoutFor(reels: readonly SlotSymbol[], bet: number): number {
   const [a, b, c] = reels;
   if (a !== undefined && a === b && b === c) return bet * TRIPLE_PAY[a];
-  if (reels.filter((s) => s === 'ojo').length === 2) return bet; // dos ojos: te devuelve la apuesta
+  // dos iguales (cualquier símbolo): te devuelve la apuesta
+  if (a === b || a === c || b === c) return bet;
   return 0;
 }
 

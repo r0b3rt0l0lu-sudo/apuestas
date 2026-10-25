@@ -1,5 +1,5 @@
 import { type Game, TABLES, canPlay, canPlayAny } from './economy';
-import { LAST_NIGHT, MIN_CARRY, nightDef } from './nights';
+import { LAST_NIGHT, MIN_CARRY, mortgageOffers, nightDef } from './nights';
 import { Rng } from './rng';
 
 export type Phase = 'hub' | 'playing' | 'duel' | 'dawn' | 'dead' | 'ending';
@@ -22,8 +22,12 @@ export interface RunState {
   actionsLeft: number;
   history: NightResult[];
   phase: Phase;
-  /** El duelo ganado perdona la cuota de esta noche. */
+  /** El duelo ganado perdona la cuota de esta noche (y la hipoteca). */
   forgiven: boolean;
+  /** Fichas que la hipoteca de esta noche suma a la cuota. */
+  debt: number;
+  /** Ya se pidió la hipoteca de esta noche (solo una por noche). */
+  mortgaged: boolean;
   flags: Record<string, boolean>;
 }
 
@@ -31,6 +35,7 @@ export type Action =
   | { type: 'enterTable' }
   | { type: 'leaveTable' }
   | { type: 'resolve'; game: Game; bet: number; payout: number; rng: number }
+  | { type: 'mortgage'; amount: number }
   | { type: 'sleep' }
   | { type: 'duelResult'; won: boolean }
   | { type: 'nextNight' }
@@ -50,11 +55,15 @@ export function newRun(seed: number): RunState {
     history: [],
     phase: 'hub',
     forgiven: false,
+    debt: 0,
+    mortgaged: false,
     flags: {}
   };
 }
 
-export const quotaOf = (s: RunState): number => nightDef(s.night).quota;
+/** Cuota de la noche más la hipoteca pedida. */
+export const quotaOf = (s: RunState): number => nightDef(s.night).quota + s.debt;
+export const canMortgage = (s: RunState): boolean => s.phase === 'hub' && !s.mortgaged;
 export const quotaMet = (s: RunState): boolean => s.balance >= quotaOf(s);
 export const rngOf = (s: RunState): Rng => new Rng(s.rng);
 
@@ -87,6 +96,12 @@ export function apply(s: RunState, a: Action): RunState {
         actionsLeft: s.actionsLeft - TABLES[a.game].cost
       });
     }
+    case 'mortgage': {
+      if (!canMortgage(s)) return s;
+      const offer = mortgageOffers(s.night).find((o) => o.amount === a.amount);
+      if (!offer) return s;
+      return { ...s, balance: s.balance + offer.amount, debt: s.debt + offer.owed, mortgaged: true };
+    }
     case 'sleep':
       // Esperar al amanecer solo si se llega a la cuota.
       if ((s.phase === 'hub' || s.phase === 'playing') && quotaMet(s)) {
@@ -111,6 +126,8 @@ export function apply(s: RunState, a: Action): RunState {
         balance: Math.max(paid, MIN_CARRY),
         actionsLeft: next.actions,
         forgiven: false,
+        debt: 0,
+        mortgaged: false,
         phase: 'hub'
       };
     }

@@ -110,7 +110,7 @@ export class Race3D extends TableStage {
     const col = el('div', 'abs hit', '', this.ui);
     Object.assign(col.style, { left: '8px', top: '96px', width: '270px' });
     HORSES.forEach((h, i) => {
-      const b = btn(col, `${h.num} ${h.name}`, () => { this.pick = i; this.refreshPick(); }, { hotkey: String(i + 1), sub: `×${h.pays} · ${Math.round((probs[i] ?? 0) * 100)} %`, style: { width: '100%', minHeight: '66px', marginBottom: '4px' } });
+      const b = btn(col, `${h.num} ${h.name}`, () => { this.pick = i; this.refreshPick(); }, { hotkey: String(i + 1), sub: `×${String(h.pays).replace('.', ',')} · ${Math.round((probs[i] ?? 0) * 100)} %`, style: { width: '100%', minHeight: '66px', marginBottom: '4px' } });
       this.laneBtns.push(b);
     });
     this.banner = el('div', 'msg txt', '', this.ui);

@@ -3,15 +3,18 @@ import { sfx } from '../../audio/sfx';
 import { drawWheel } from '../../art/wheel';
 import { brickTex, curtainTex, woodTex } from '../../art/tex3d';
 import { GAMES, type Game, TABLES, canPlay, minBet } from '../../core/economy';
+import { mortgageOffers } from '../../core/nights';
 import { session } from '../../core/session';
-import { quotaMet } from '../../core/state';
+import { canMortgage, quotaMet } from '../../core/state';
 import { T } from '../../i18n/es';
 import { HudDom } from '../../ui/dom/hud';
 import { btn, el } from '../../ui/dom/kit';
 import { openOptions } from '../../ui/dom/options';
+import { showOverlay } from '../../ui/dom/overlay';
 import { Typewriter } from '../../ui/dom/typewriter';
 import { Cigarette } from '../cigarette';
 import { Cobrador3D } from '../cobrador3d';
+import { FpsControls, type Solid } from '../fps';
 import { engine } from '../engine';
 import { bulbString, box, carousel, cyl, glow, lam, mesh, reelDrum, rouletteTable, slotMachine } from '../models';
 import { goPhase, goTable } from '../router';
@@ -23,14 +26,11 @@ import { ease } from '../tween';
 const HALF_X = 6.8;
 const Z_MIN = -8.6;
 const Z_MAX = 6.6;
-const RADIUS = 0.35;
 const REACH = 2.6;
 const EYE = 1.65;
 
-interface Solid { x: number; z: number; hx: number; hz: number }
-interface Station { game: Game; solid: Solid; cam: THREE.Vector3; look: THREE.Vector3 }
-
-const game3dHeight = (g: Game): number => (g === 'slots' ? 3.4 : g === 'roulette' ? 2.4 : 4.6);
+type StationId = Game | 'mortgage';
+interface Station { game: StationId; solid: Solid; cam: THREE.Vector3; look: THREE.Vector3; label: THREE.Vector3 }
 
 /** Última posición en la sala, para volver donde estabas al salir de una mesa. */
 let saved: { night: number; x: number; z: number; yaw: number; pitch: number } | null = null;
@@ -53,14 +53,13 @@ export class Hub3D extends Stage {
   private labels: Array<{ el: HTMLElement; s: Station }> = [];
   private cig!: Cigarette;
   private stations: Station[] = [];
-  private solids: Solid[] = [];
-  private keys = new Set<string>();
-  private yaw = 0;
-  private pitch = 0;
-  private pos = new THREE.Vector3(0, EYE, 5);
+  private fps!: FpsControls;
+  private deskSolid: Solid = { x: 0, z: -7.5, hx: 2.4, hz: 0.8 };
   private near: Station | null = null;
-  private walked = 0;
   private listeners: Array<[string, EventListener, EventTarget]> = [];
+
+  private get pos(): THREE.Vector3 { return this.fps.pos; }
+  private get solids(): Solid[] { return this.fps.solids; }
 
   init(): void {
     const r = session.run;
@@ -68,7 +67,8 @@ export class Hub3D extends Stage {
     if (r.phase === 'playing') session.dispatch({ type: 'leaveTable' });
     this.light(640, 400, 1250, 0.5);
     sfx.ambience('hub');
-    this.camera.rotation.order = 'YXZ';
+    this.fps = new FpsControls(this.camera, engine.canvas, { minX: -HALF_X, maxX: HALF_X, minZ: Z_MIN, maxZ: Z_MAX }, { eye: EYE, radius: 0.35, speed: 3.3 });
+    this.fps.pos.set(0, EYE, 5);
     const sc = this.scene;
     sc.background = new THREE.Color(0x000000);
     sc.fog = new THREE.Fog(0x14041c, 7, 24);
@@ -79,10 +79,10 @@ export class Hub3D extends Stage {
 
     if (saved && saved.night === r.night) {
       this.pos.set(saved.x, EYE, saved.z);
-      this.yaw = saved.yaw;
-      this.pitch = saved.pitch;
+      this.fps.yaw = saved.yaw;
+      this.fps.pitch = saved.pitch;
     }
-    this.applyCamera();
+    this.fps.apply();
     this.scene.add(this.camera);
     this.cig = new Cigarette(this.scene, this.camera);
     this.cig.onFinished = (n) => { const l = T.hub.smoke[(n - 1) % T.hub.smoke.length]; if (l && !this.locked) void this.tw.say(l, true); };
@@ -151,7 +151,7 @@ export class Hub3D extends Stage {
       sc.add(l);
       this.lamps.push(l);
     });
-    this.solids.push({ x: 0, z: -7.5, hx: 2.4, hz: 0.8 });
+    this.solids.push(this.deskSolid);
     box(4.4, 1.05, 1.3, lam(0x5a3a22, tex('hub-desk', () => woodTex('#5a3a22'), [3, 1])), 0, 0.52, -7.5, sc);
     box(4.5, 0.08, 1.4, lam(0x2a3a1c), 0, 1.07, -7.5, sc);
     // cuatro columnas
@@ -198,15 +198,17 @@ export class Hub3D extends Stage {
     const cSolid = { x: 4.4, z: -3.4, hx: 2.05, hz: 2.05 };
     this.solids.push(sSolid, rSolid, cSolid);
     this.stations = [
-      { game: 'slots', solid: sSolid, cam: new THREE.Vector3(-3.6, 1.75, 1.0), look: new THREE.Vector3(-5.9, 1.6, 1.0) },
-      { game: 'roulette', solid: rSolid, cam: new THREE.Vector3(-1.6, 2.7, -1.3), look: new THREE.Vector3(-2.1, 1, -4.0) },
-      { game: 'race', solid: cSolid, cam: new THREE.Vector3(4.4, 2.0, -0.3), look: new THREE.Vector3(4.4, 1.7, -3.4) }
+      { game: 'slots', solid: sSolid, cam: new THREE.Vector3(-3.6, 1.75, 1.0), look: new THREE.Vector3(-5.9, 1.6, 1.0), label: new THREE.Vector3(-5.9, 3.4, 1.0) },
+      { game: 'roulette', solid: rSolid, cam: new THREE.Vector3(-1.6, 2.7, -1.3), look: new THREE.Vector3(-2.1, 1, -4.0), label: new THREE.Vector3(-1.1, 2.4, -4.0) },
+      { game: 'race', solid: cSolid, cam: new THREE.Vector3(4.4, 2.0, -0.3), look: new THREE.Vector3(4.4, 1.7, -3.4), label: new THREE.Vector3(4.4, 4.6, -3.4) },
+      { game: 'mortgage', solid: this.deskSolid, cam: new THREE.Vector3(0, 1.8, -5.0), look: new THREE.Vector3(0, 1.9, -7.5), label: new THREE.Vector3(0, 1.45, -6.7) }
     ];
     const spot = new THREE.PointLight(0xe8b868, 14, 9, 1.5);
     spot.position.set(-1.1, 3.4, -3.1);
     sc.add(spot);
     this.stations.forEach((s, i) => {
-      const obj = [slot.group, rt.group, car.group][i] ?? slot.group;
+      const obj = [slot.group, rt.group, car.group][i];
+      if (!obj) return;
       this.click(obj, () => { if (this.near === s) this.interact(); }, { enabled: () => !this.entering && this.near === s });
     });
   }
@@ -249,35 +251,21 @@ export class Hub3D extends Stage {
   }
 
   private bind(): void {
-    const look = (dx: number, dy: number): void => {
-      this.yaw -= dx * 0.0035;
-      this.pitch = Math.max(-0.7, Math.min(0.7, this.pitch - dy * 0.0035));
-    };
-    this.on(window, 'pointermove', ((e: PointerEvent) => {
-      if (this.entering) return;
-      if (document.pointerLockElement === engine.canvas) look(e.movementX, e.movementY);
-      else if ((e.buttons & 1) && e.target === engine.canvas) look(e.movementX, e.movementY);
-    }) as EventListener);
-    // un clic en la sala captura el ratón (Esc lo suelta); si el navegador no lo permite, se mira arrastrando
-    this.on(engine.canvas, 'pointerdown', (() => {
-      if (this.entering || document.pointerLockElement === engine.canvas) return;
-      try { void (engine.canvas.requestPointerLock() as Promise<void> | undefined)?.catch(() => undefined); } catch { /* sin bloqueo de puntero */ }
-    }) as EventListener);
+    this.fps.bind();
     this.on(window, 'keydown', ((e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (k === 'escape') { if (!document.pointerLockElement) openOptions(this.ui); return; }
+      if (k === 'escape') { if (!document.pointerLockElement && this.fps.enabled) openOptions(this.ui); return; }
+      if (!this.fps.enabled) return;
       const onBtn = e.target instanceof HTMLButtonElement;
       if (onBtn && (k === 'enter' || k === ' ')) return;
       if (k === 'enter' || k === ' ') { e.preventDefault(); if (this.locked) this.advance(); else this.interact(); return; }
       if (k === 'z' && this.sleepBtn && !this.sleepBtn.disabled) { this.sleepBtn.click(); return; }
       if (k === 'e') { if (!e.repeat) this.smoke(); return; }
       if (k === 'f') { e.preventDefault(); this.interact(); return; }
-      const idx = ['1', '2', '3'].indexOf(k);
-      if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); return; }
-      if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.keys.add(k); e.preventDefault(); }
+      const idx = ['1', '2', '3', '4'].indexOf(k);
+      if (idx === 3) { this.openMortgage(); return; }
+      if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); }
     }) as EventListener);
-    this.on(window, 'keyup', ((e: KeyboardEvent) => { this.keys.delete(e.key.toLowerCase()); }) as EventListener);
-    this.on(window, 'blur', () => this.keys.clear());
     this.on(this.ui, 'pointerdown', () => { if (!this.tw.skip()) this.waiting?.(); });
   }
 
@@ -289,55 +277,67 @@ export class Hub3D extends Stage {
     if (!this.tw.skip()) this.waiting?.();
   }
 
-  private applyCamera(): void {
-    this.camera.position.copy(this.pos);
-    this.camera.rotation.set(this.pitch, this.yaw, 0);
-  }
-
   private stationDist(s: Station): number {
     const dx = Math.max(Math.abs(this.pos.x - s.solid.x) - s.solid.hx, 0);
     const dz = Math.max(Math.abs(this.pos.z - s.solid.z) - s.solid.hz, 0);
     return Math.hypot(dx, dz);
   }
 
-  private walk(dt: number): void {
-    const k = this.keys;
-    const turn = (k.has('arrowleft') ? 1 : 0) - (k.has('arrowright') ? 1 : 0);
-    this.yaw += turn * 1.9 * dt;
-    const fwd = (k.has('w') || k.has('arrowup') ? 1 : 0) - (k.has('s') || k.has('arrowdown') ? 1 : 0);
-    const str = (k.has('d') ? 1 : 0) - (k.has('a') ? 1 : 0);
-    if (!fwd && !str) return;
-    const len = Math.hypot(fwd, str);
-    const sp = 3.3 * dt / len;
-    const sin = Math.sin(this.yaw), cos = Math.cos(this.yaw);
-    const dx = (-sin * fwd + cos * str) * sp;
-    const dz = (-cos * fwd - sin * str) * sp;
-    this.tryMove(dx, 0);
-    this.tryMove(0, dz);
-    this.walked += Math.hypot(dx, dz);
-  }
-
-  private tryMove(dx: number, dz: number): void {
-    const x = Math.max(-HALF_X + RADIUS, Math.min(HALF_X - RADIUS, this.pos.x + dx));
-    const z = Math.max(Z_MIN + RADIUS, Math.min(Z_MAX - RADIUS, this.pos.z + dz));
-    const hit = this.solids.some((s) => Math.abs(x - s.x) < s.hx + RADIUS && Math.abs(z - s.z) < s.hz + RADIUS);
-    if (!hit) { this.pos.x = x; this.pos.z = z; }
-  }
-
   private updateNear(): void {
-    let best: Station | null = null, bd = REACH;
-    for (const s of this.stations) { const d = this.stationDist(s); if (d < bd) { bd = d; best = s; } }
+    let best: Station | null = null;
+    const bd = REACH;
+    // entre varias mesas a mano gana la que miras
+    const fx = -Math.sin(this.fps.yaw), fz = -Math.cos(this.fps.yaw);
+    let bs = Infinity;
+    for (const s of this.stations) {
+      const d = this.stationDist(s);
+      if (d >= bd) continue;
+      const vx = s.solid.x - this.pos.x, vz = s.solid.z - this.pos.z;
+      const facing = Math.max(0, (vx * fx + vz * fz) / (Math.hypot(vx, vz) || 1));
+      const score = d - 1.2 * facing;
+      if (score < bs) { bs = score; best = s; }
+    }
     this.near = best;
     if (!best || this.entering) { this.prompt.style.display = 'none'; return; }
     const r = session.run, g = best.game;
-    const ok = canPlay(g, r.balance, r.actionsLeft);
     this.prompt.style.display = 'block';
+    if (g === 'mortgage') {
+      const ok = canMortgage(r);
+      this.prompt.style.opacity = ok ? '1' : '0.6';
+      this.prompt.textContent = `${T.hub.use(T.hub.mortgage)} · ${ok ? T.mortgage.hint : T.mortgage.done}`;
+      return;
+    }
+    const ok = canPlay(g, r.balance, r.actionsLeft);
     this.prompt.style.opacity = ok ? '1' : '0.6';
     this.prompt.textContent = `${T.hub.use(T.hub[g])} · ${ok ? T.hub.cost(TABLES[g].cost, minBet(g)) : T.hub.unavailable}`;
   }
 
   private interact(): void {
-    if (this.near && !this.entering) void this.enter(this.near.game);
+    if (!this.near || this.entering || !this.fps.enabled) return;
+    if (this.near.game === 'mortgage') this.openMortgage();
+    else void this.enter(this.near.game);
+  }
+
+  /** El Cobrador te adelanta fichas a cambio de sumar lo prestado, con interés, a la cuota de esta noche. */
+  private openMortgage(): void {
+    const r = session.run;
+    if (this.entering || !this.fps.enabled) return;
+    if (!canMortgage(r)) { void this.tw.say(T.mortgage.refuse, true); return; }
+    this.fps.setEnabled(false);
+    const close = (): void => { ov.close(); this.fps.setEnabled(true); };
+    const ov = showOverlay(this.ui, T.mortgage.title, T.mortgage.body, [
+      ...mortgageOffers(r.night).map((o) => ({
+        text: T.mortgage.option(o.amount, o.owed),
+        onClick: () => {
+          close();
+          session.dispatch({ type: 'mortgage', amount: o.amount });
+          sfx.prize();
+          this.cobrador.setMood('sonrisa');
+          void this.tw.say(T.mortgage.signed(o.amount, o.owed), true);
+        }
+      })),
+      { text: T.mortgage.cancel, onClick: close }
+    ], { w: 900, onBack: close });
   }
 
   // ---------- flujo ----------
@@ -371,10 +371,10 @@ export class Hub3D extends Stage {
     this.entering = true;
     this.prompt.style.display = 'none';
     this.cig.hide();
-    saved = { night: r.night, x: this.pos.x, z: this.pos.z, yaw: this.yaw, pitch: this.pitch };
+    saved = { night: r.night, x: this.pos.x, z: this.pos.z, yaw: this.fps.yaw, pitch: this.fps.pitch };
     session.dispatch({ type: 'enterTable' });
     const c0 = this.pos.clone();
-    const l0 = c0.clone().add(new THREE.Vector3(-Math.sin(this.yaw) * 5, Math.sin(this.pitch) * 5, -Math.cos(this.yaw) * 5));
+    const l0 = c0.clone().add(new THREE.Vector3(-Math.sin(this.fps.yaw) * 5, Math.sin(this.fps.pitch) * 5, -Math.cos(this.fps.yaw) * 5));
     const look = new THREE.Vector3();
     this.run(async () => {
       await this.tweens.tween(750, (k) => {
@@ -402,9 +402,7 @@ export class Hub3D extends Stage {
     this.cobrador.update(dt);
     this.tickCig(dt, t);
     if (this.entering) return;
-    this.walk(dt);
-    this.pos.y = EYE + Math.sin(this.walked * 5) * 0.035;
-    this.applyCamera();
+    this.fps.update(dt);
     this.updateNear();
     this.placeLabels();
   }
@@ -412,7 +410,7 @@ export class Hub3D extends Stage {
   private placeLabels(): void {
     const v = new THREE.Vector3();
     for (const { el: l, s } of this.labels) {
-      v.set(s.solid.x, game3dHeight(s.game), s.solid.z);
+      v.copy(s.label);
       const d = v.distanceTo(this.pos);
       v.project(this.camera);
       const vis = v.z < 1 && Math.abs(v.x) < 1.1 && d < 11 && !this.entering;
@@ -429,10 +427,10 @@ export class Hub3D extends Stage {
   }
 
   dispose(): void {
-    if (!this.entering) saved = { night: session.run.night, x: this.pos.x, z: this.pos.z, yaw: this.yaw, pitch: this.pitch };
+    if (!this.entering) saved = { night: session.run.night, x: this.pos.x, z: this.pos.z, yaw: this.fps.yaw, pitch: this.fps.pitch };
     this.listeners.forEach(([t, fn, target]) => target.removeEventListener(t, fn));
     this.cig?.dispose();
-    if (document.pointerLockElement) document.exitPointerLock();
+    this.fps?.unbind();
     this.hud?.dispose();
     this.tw?.stop();
     super.dispose();

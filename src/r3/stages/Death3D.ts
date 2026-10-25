@@ -7,7 +7,7 @@ import { Cobrador3D } from '../cobrador3d';
 import { candle } from '../duelprops';
 import { engine } from '../engine';
 import { Fx3D } from '../fx3d';
-import { goHub, goPhase } from '../router';
+import { goPhase } from '../router';
 import { Stage } from '../stage';
 import { ease } from '../tween';
 
@@ -49,11 +49,11 @@ export class Death3D extends Stage {
     Object.assign(sub.style, { left: '0', right: '0', top: '400px', fontSize: '40px', whiteSpace: 'pre-line', opacity: '0' });
     const row = el('div', 'abs hit', '', this.ui);
     Object.assign(row.style, { left: '380px', top: '580px', width: '520px', opacity: '0' });
-    const b = btn(row, T.death.again, () => { session.startNew(); goHub(); }, { cls: 'big', style: { width: '100%' } });
+    const b = btn(row, T.death.again, () => { session.startNew(); goPhase(); }, { cls: 'big', style: { width: '100%' } });
     b.disabled = true;
     this.detach = attachNav(this.ui);
 
-    // secuencia: 0,6 s se acerca (3,2 s) · 1,2 s la vela se apaga (2,2 s) · 3,6 s negro · 4,2 s título · 5 s subtítulos · 6,2 s botón
+    // secuencia: 0,6 s se acerca (3,2 s) · 1,2 s la vela se apaga (2,2 s) · 3 s negro · 3,9 s SUSTO (grito) · 5,2 s negro · 5,9 s título · 6,7 s subtítulos · 7,9 s botón
     this.run(async () => {
       await this.tweens.wait(600);
       sfx.whisper();
@@ -61,9 +61,24 @@ export class Death3D extends Stage {
       await this.tweens.wait(600);
       this.tweens.tween(2200, (k) => { cl.intensity = 10 * (1 - k); }).then(() => { this.can.setLit(false); this.fx.smoke(new THREE.Vector3(-2.6, 1.0, 0), 10, 0.9); }).catch(() => undefined);
       await this.tweens.wait(1800);
+      // se corta a negro y, tras un silencio, el susto: la cara del Cobrador llena la pantalla con un grito
       black.style.opacity = '1';
       this.cob.visible = false; this.can.group.visible = false;
-      await this.tweens.wait(600);
+      await this.tweens.wait(900);
+      this.light(640, 400, 2200, 0);
+      this.cob.anchor(0, 1.7, -0.5);
+      this.cob.setMood('cobra', true);
+      this.cob.visible = true;
+      black.style.opacity = '0';
+      sfx.scream();
+      engine.shake(46, 700);
+      engine.flash('#7a1e1e', 0.9);
+      for (let i = 0; i < 6; i++) { this.cob.glitch(); this.cob.lunge(); await this.tweens.wait(100); }
+      await this.tweens.wait(250);
+      black.style.opacity = '1';
+      this.cob.visible = false;
+      this.light(640, 400, 700, 0.1);
+      await this.tweens.wait(700);
       title.style.opacity = '1';
       await this.tweens.wait(800);
       sub.style.opacity = '1';

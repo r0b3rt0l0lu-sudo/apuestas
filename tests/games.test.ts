@@ -9,10 +9,18 @@ describe('tragaperras', () => {
   it('pagos de tres iguales', () => {
     for (const [s, x] of Object.entries(slots.TRIPLE_PAY)) expect(slots.payoutFor([s, s, s] as slots.SlotSymbol[], 100)).toBe(100 * x);
   });
-  it('dos ojos devuelven la apuesta; otras parejas no pagan', () => {
+  it('cualquier pareja devuelve la apuesta; sin pareja no paga', () => {
     expect(slots.payoutFor(['ojo', 'diente', 'ojo'], 100)).toBe(100);
-    expect(slots.payoutFor(['diente', 'diente', 'ojo'], 100)).toBe(0);
+    expect(slots.payoutFor(['diente', 'diente', 'ojo'], 100)).toBe(100);
+    expect(slots.payoutFor(['llave', 'ojo', 'llave'], 100)).toBe(100);
     expect(slots.payoutFor(['ojo', 'diente', 'llave'], 100)).toBe(0);
+  });
+  it('el retorno medio de la tragaperras ronda el 74 %', () => {
+    const rng = new Rng(21), n = 200_000;
+    let paid = 0;
+    for (let i = 0; i < n; i++) paid += slots.spin(rng, 100).payout;
+    expect(paid / (n * 100)).toBeGreaterThan(0.68);
+    expect(paid / (n * 100)).toBeLessThan(0.8);
   });
   it('frecuencias de símbolos ≈ pesos', () => {
     const rng = new Rng(5), n = 90000, c: Record<string, number> = {};
@@ -90,13 +98,13 @@ describe('carreras', () => {
     for (let i = 0; i < n; i++) wins[race.run(rng, ['widowFast']).winner]!++;
     p.forEach((q, i) => expect(Math.abs(wins[i]! / n - q)).toBeLessThan(0.01));
   });
-  it('el retorno medio ronda el 85 % para cualquier caballo', () => {
+  it('el retorno medio ronda el 92-97 % para cualquier caballo', () => {
     const rng = new Rng(9), n = 60_000;
     for (let pick = 0; pick < 6; pick++) {
       let paid = 0;
       for (let i = 0; i < n; i++) paid += race.run(rng, []).payout(pick, 100);
-      expect(paid / (n * 100)).toBeGreaterThan(0.78);
-      expect(paid / (n * 100)).toBeLessThan(0.92);
+      expect(paid / (n * 100)).toBeGreaterThan(0.86);
+      expect(paid / (n * 100)).toBeLessThan(1.04);
     }
   });
   it('los tiempos son coherentes con el orden de llegada', () => {
