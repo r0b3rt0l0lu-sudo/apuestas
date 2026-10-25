@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { sfx } from '../audio/sfx';
 import { Painter } from '../art/painter';
+import { FBXLoader } from 'three/examples/jsm/loaders/FBXLoader.js';
+import fbxUrl from '../assets/Cigarette.fbx?inline';
 import { box, glow, lam } from './models';
 import { canvasTex } from './tex';
 import { ease } from './tween';
@@ -12,13 +14,18 @@ const pose = (x: number, y: number, z: number, rx: number, ry: number, rz: numbe
 const OFF = pose(0.3, -0.7, -0.5, -0.3, 0.2, 0.3);
 const REST = pose(0.2, -0.1, -0.5, -0.15, 0.25, 0.2);
 const MOUTH = pose(0.03, -0.15, -0.38, -0.7, 0.1, 0.05);
-const LEN0 = 0.13;
-const FILTER = 0.045;
-const BURN = 0.02;
-const MIN_LEN = 0.05;
+const LEN0 = 0.19;
+const FILTER = 0;
+const BURN = 0.027;
+const MIN_LEN = 0.065;
 const DUR: Record<Phase, number> = { off: 0, raise: 0.6, light: 0.9, drag: 1.2, hold: 0.4, lower: 0.65, rest: 0, drop: 0.7 };
 
 interface Puff { s: THREE.Sprite; life: number; max: number; vel: THREE.Vector3; s0: number; s1: number; o0: number }
+
+const extent = (pts: THREE.Vector3[]): number => {
+  const b = new THREE.Box3().setFromPoints(pts);
+  return b.getSize(new THREE.Vector3()).length();
+};
 
 /** Mano en primera persona con un cigarro que se consume, brasa que brilla al dar una calada y humo en el mundo. */
 export class Cigarette extends THREE.Group {
@@ -30,8 +37,8 @@ export class Cigarette extends THREE.Group {
   private fresh = true;
   private hand = new THREE.Group();
   private cig = new THREE.Group();
-  private paper: THREE.Mesh;
-  private ash: THREE.Mesh;
+  private body: THREE.Mesh | null = null;
+  private cap: THREE.Mesh | null = null;
   private ember: THREE.Mesh;
   private flame: THREE.Mesh;
   private tipObj = new THREE.Object3D();
@@ -60,11 +67,7 @@ export class Cigarette extends THREE.Group {
     box(0.024, 0.02, 0.026, lam(0xc4a050), 0.016, -0.02, -0.012, this.hand); // anillo
     box(0.09, 0.09, 0.07, dark, 0, -0.21, 0.06, this.hand); // manga
     box(0.094, 0.018, 0.074, lam(0xc4b494), 0, -0.16, 0.06, this.hand); // puño
-    // cigarro
-    const filter = box(0.0125, FILTER, 0.0125, lam(0xc89a58, null, { emissive: 0x302010 }), 0, FILTER / 2, 0, this.cig);
-    filter.name = 'filter';
-    this.paper = box(1, 1, 1, lam(0xece0c0, null, { emissive: 0x383020 }), 0, 0, 0, this.cig);
-    this.ash = box(0.0135, 0.012, 0.0135, lam(0x948068, null, { emissive: 0x1c1810 }), 0, 0, 0, this.cig);
+    // cigarro: el modelo se carga aparte (Cigarette.fbx); mientras tanto solo hay brasa
     this.ember = box(0.0145, 0.008, 0.0145, glow(0xff8a30), 0, 0, 0, this.cig);
     this.flame = box(0.012, 0.03, 0.012, glow(0xffd860), 0, 0, 0, this.cig);
     this.flame.visible = false;
@@ -73,6 +76,7 @@ export class Cigarette extends THREE.Group {
     this.hand.add(this.cig);
     this.add(this.hand);
     this.setLen(LEN0);
+    void this.loadModel();
     const p = new Painter(16, 16);
     [[7, 0.18], [5, 0.22], [3, 0.3]].forEach(([r, a]) => { p.ctx.fillStyle = `rgba(255,255,255,${a})`; p.ctx.beginPath(); p.ctx.arc(8, 8, r as number, 0, Math.PI * 2); p.ctx.fill(); });
     this.tex = canvasTex(p.canvas);
@@ -81,14 +85,66 @@ export class Cigarette extends THREE.Group {
     camera.add(this);
   }
 
+  /** Carga el FBX, lo orienta con la punta hacia +y y el extremo del filtro en el origen, y lo escala a LEN0. */
+  private async loadModel(): Promise<void> {
+    try {
+      const bin = atob(fbxUrl.slice(fbxUrl.indexOf(',') + 1));
+      const buf = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+      const root = new FBXLoader().parse(buf.buffer, '');
+      root.updateMatrixWorld(true);
+      const meshes: THREE.Mesh[] = [];
+      root.traverse((o) => { if ((o as THREE.Mesh).isMesh) meshes.push(o as THREE.Mesh); });
+      if (meshes.length === 0) return;
+      const world = (m: THREE.Mesh): THREE.Vector3[] => {
+        const a = m.geometry.attributes.position as THREE.BufferAttribute;
+        return Array.from({ length: a.count }, (_, i) => new THREE.Vector3().fromBufferAttribute(a, i).applyMatrix4(m.matrixWorld));
+      };
+      const sorted = meshes.map((m) => ({ m, pts: world(m) })).sort((x, y) => extent(y.pts) - extent(x.pts));
+      const main = sorted[0], capSrc = sorted[1];
+      if (!main) return;
+      const cen = (pts: THREE.Vector3[]): THREE.Vector3 => pts.reduce((c, q) => c.add(q), new THREE.Vector3()).divideScalar(pts.length);
+      const c1 = cen(main.pts);
+      // eje principal por iteración de potencias sobre la covarianza
+      const cov = new THREE.Matrix3();
+      const e = cov.elements.map(() => 0);
+      main.pts.forEach((q) => { const d = q.clone().sub(c1).toArray(); for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) e[c * 3 + r] = (e[c * 3 + r] ?? 0) + (d[r] ?? 0) * (d[c] ?? 0); });
+      cov.fromArray(e);
+      let axis = new THREE.Vector3(1, 0.3, 0.2).normalize();
+      for (let k = 0; k < 60; k++) axis = axis.applyMatrix3(cov).normalize();
+      if (capSrc && cen(capSrc.pts).sub(c1).dot(axis) < 0) axis.negate();
+      let lo = Infinity, hi = -Infinity;
+      main.pts.forEach((q) => { const t = q.clone().sub(c1).dot(axis); lo = Math.min(lo, t); hi = Math.max(hi, t); });
+      const origin = c1.clone().addScaledVector(axis, lo);
+      const sc = LEN0 / (hi - lo);
+      const M = new THREE.Matrix4()
+        .makeScale(sc, sc, sc)
+        .multiply(new THREE.Matrix4().makeRotationFromQuaternion(new THREE.Quaternion().setFromUnitVectors(axis, new THREE.Vector3(0, 1, 0))))
+        .multiply(new THREE.Matrix4().makeTranslation(-origin.x, -origin.y, -origin.z));
+      const build = (src: THREE.Mesh): THREE.Mesh => {
+        const g = src.geometry.clone();
+        g.applyMatrix4(src.matrixWorld);
+        g.applyMatrix4(M);
+        const old = (Array.isArray(src.material) ? src.material[0] : src.material) as THREE.MeshPhongMaterial;
+        const mat = new THREE.MeshLambertMaterial({ map: old.map, color: old.color, emissive: 0x7a6a58, emissiveMap: old.map, transparent: old.transparent, opacity: old.opacity, side: THREE.DoubleSide });
+        return new THREE.Mesh(g, mat);
+      };
+      this.body = build(main.m);
+      this.cig.add(this.body);
+      if (capSrc) { this.cap = build(capSrc.m); this.cig.add(this.cap); }
+      this.setLen(this.len);
+    } catch (err) {
+      console.warn('Cigarette.fbx no se pudo cargar', err);
+    }
+  }
+
   get busy(): boolean { return this.phase !== 'off' && this.phase !== 'rest'; }
 
   private setLen(l: number): void {
     this.len = l;
-    this.paper.scale.set(0.0125, l, 0.0125);
-    this.paper.position.y = FILTER + l / 2;
-    this.ash.position.y = FILTER + l - 0.006;
-    this.ember.position.y = FILTER + l + 0.0025;
+    if (this.body) this.body.scale.y = l / LEN0;
+    if (this.cap) this.cap.position.y = l - LEN0;
+    this.ember.position.y = FILTER + l + 0.002;
     this.flame.position.y = FILTER + l + 0.02;
     this.tipObj.position.y = FILTER + l + 0.008;
     this.ember_light.position.y = FILTER + l + 0.02;
