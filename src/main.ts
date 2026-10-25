@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { C, H, W } from './config';
+import { H, W } from './config';
 import { session } from './core/session';
 import { CrtScene } from './fx/crt';
 import { BootScene } from './scenes/BootScene';
@@ -19,7 +19,7 @@ const game = new Phaser.Game({
   parent: 'game',
   width: W,
   height: H,
-  backgroundColor: C.bg,
+  backgroundColor: '#000000',
   pixelArt: true,
   roundPixels: true,
   scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },

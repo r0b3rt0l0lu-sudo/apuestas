@@ -19,8 +19,8 @@ function cycle(scene: Phaser.Scene, img: Phaser.GameObjects.Image, keys: string[
 
 /** Dos capas de niebla que se desplazan a distinta velocidad, en saltos de píxel de arte. */
 function fogLayers(scene: Phaser.Scene, y: number, depth: number): void {
-  const a = scene.add.tileSprite(CX, y, 1280, 192, 'fog').setTileScale(S, S).setDepth(depth).setAlpha(0.8);
-  const b = scene.add.tileSprite(CX, y + 40, 1280, 192, 'fog').setTileScale(S, S).setDepth(depth + 1).setAlpha(0.55).setFlipX(true);
+  const a = scene.add.tileSprite(CX, y, 1280, 192, 'fog').setTileScale(S, S).setDepth(depth).setAlpha(0.35).setTint(0x7a1a4a);
+  const b = scene.add.tileSprite(CX, y + 40, 1280, 192, 'fog').setTileScale(S, S).setDepth(depth + 1).setAlpha(0.25).setTint(0x4a0e5a).setFlipX(true);
   let ta = 0, tb = 0;
   const upd = (_t: number, dt: number) => {
     ta += dt * 0.006; tb += dt * 0.0035;
@@ -60,8 +60,8 @@ export function fairBackdrop(scene: Phaser.Scene): void {
   fogLayers(scene, 560, -5);
   bats(scene, 120, 330);
   // resplandor extra de los faroles que parpadea
-  const lamps = [48, 272].map((x) => scene.add.ellipse(x * S, 95 * S, 220, 200, hex(C.lamp), 0.06).setDepth(-6));
-  lamps.forEach((l) => lampFlicker(scene, [l], 0.06));
+  const lamps = [48, 272].map((x) => scene.add.ellipse(x * S, 95 * S, 220, 200, hex(C.lamp), 0.035).setDepth(-6));
+  lamps.forEach((l) => lampFlicker(scene, [l], 0.035));
 }
 
 export function boothBackdrop(scene: Phaser.Scene): { bulbs: Phaser.GameObjects.Image; lever: Phaser.GameObjects.Image } {

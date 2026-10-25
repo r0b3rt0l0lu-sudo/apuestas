@@ -78,10 +78,10 @@ export interface FairParts {
 
 export function drawFairNight(): FairParts {
   const p = P();
-  p.vgrad(0, 0, SW, 130, '#05030a', '#2d1a3b');
-  p.rect(0, 130, SW, 70, '#0c0812');
+  p.vgrad(0, 0, SW, 130, '#000000', '#2a0a38');
+  p.rect(0, 130, SW, 70, '#050208');
   // calima del horizonte
-  for (let y = 112; y < 136; y++) for (let x = 0; x < SW; x++) if (bayer(x, y) < (1 - Math.abs(y - 124) / 12) * 0.5) p.px(x, y, '#5a3350');
+  for (let y = 112; y < 136; y++) for (let x = 0; x < SW; x++) if (bayer(x, y) < (1 - Math.abs(y - 124) / 12) * 0.5) p.px(x, y, '#7a1a4a');
   // luna con cráteres y resplandor
   p.glow(268, 30, 30, '#8c8ab0', 0.55);
   p.shadedEllipse(268, 30, 10, 10, ramp('#cfc6a8'), [-0.7, -0.5]);
@@ -89,26 +89,26 @@ export function drawFairNight(): FairParts {
   // montañas y arboleda lejana
   for (let x = 0; x < SW; x++) {
     const h = 10 + Math.sin(x * 0.05) * 6 + Math.sin(x * 0.17 + 2) * 3 + hash(x >> 2, 3) * 4;
-    p.rect(x, Math.round(132 - h), 1, Math.round(h) + 4, '#150e1d');
+    p.rect(x, Math.round(132 - h), 1, Math.round(h) + 4, '#0a0412');
   }
   for (let x = 4; x < SW; x += 9 + Math.floor(hash(x, 1) * 6)) {
     const hh = 8 + Math.floor(hash(x, 2) * 10);
-    p.poly([[x, 130], [x - 3, 130], [x - 1, 130 - hh], [x + 1, 130 - hh], [x + 3, 130]], '#0f0a16');
+    p.poly([[x, 130], [x - 3, 130], [x - 1, 130 - hh], [x + 1, 130 - hh], [x + 3, 130]], '#06020c');
   }
   // noria: patas (el aro gira aparte)
   p.poly([[232, 92], [226, 92], [206, 152], [212, 152]], '#1a1222').poly([[232, 92], [238, 92], [258, 152], [252, 152]], '#1a1222');
   p.line(214, 130, 250, 130, '#221830', 1);
   // carpas
-  stripedTent(p, 36, 152, 30, 14, 26, '#5b2230', '#7a6c52', 1);
-  stripedTent(p, 124, 150, 22, 10, 20, '#2f4a42', '#6b5f48', 2);
-  stripedTent(p, 292, 154, 26, 12, 24, '#5b2230', '#7a6c52', 3);
+  stripedTent(p, 36, 152, 30, 14, 26, '#7a1428', '#b08a46', 1);
+  stripedTent(p, 124, 150, 22, 10, 20, '#0e4a46', '#8a6a34', 2);
+  stripedTent(p, 292, 154, 26, 12, 24, '#7a1428', '#b08a46', 3);
   // suelo
   p.rect(0, 152, SW, 3, '#0a0610');
-  cobbles(p, 155, SH, '#2a2030');
+  cobbles(p, 155, SH, '#1a0e1c');
   // charcos con reflejo
   [[70, 178, 18], [200, 186, 24], [150, 168, 10]].forEach(([x, y, w]) => {
-    p.rect(x!, y!, w!, 2, '#1b2a3c');
-    p.rect(x! + 2, y!, Math.floor(w! / 3), 1, '#3b5a74');
+    p.rect(x!, y!, w!, 2, '#0a1a30');
+    p.rect(x! + 2, y!, Math.floor(w! / 3), 1, '#2a6aa0');
   });
   // postes con farol
   [48, 272].forEach((x) => {
@@ -436,7 +436,7 @@ export function drawDuelRoom(): { bg: Painter; beam: Painter } {
     for (let x = 0; x < SW; x++) {
       const px = (x - 160) / (1 + t * 0.9);
       const cx = Math.floor(px / (sz * 0.6) + 50), cy = Math.floor((y - 140) / (3 + t * 5));
-      p.px(x, y, (cx + cy) % 2 === 0 ? mix('#1a1216', '#2e2228', t) : mix('#0c0709', '#150e12', t));
+      p.px(x, y, (cx + cy) % 2 === 0 ? mix('#1a0a10', '#3a1018', t) : mix('#050204', '#0c0508', t));
     }
   }
   p.rect(0, 139, SW, 2, '#0a0508');

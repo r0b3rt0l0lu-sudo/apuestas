@@ -17,7 +17,7 @@ import { label } from '../ui/text';
 import { phrase } from './common';
 import { TableScene } from './TableScene';
 
-const CX = 360, CY = 400, SCALE = 3, TURNS = 5, DUR = 4000;
+const CX = 340, CY = 400, SCALE = 3, TURNS = 5, DUR = 4000;
 const PCOL = { rojo: '#a8323c', negro: '#241c2e', verde: '#2f6a48' } as const;
 
 interface Anim { t: number; angle: number; pocket: number; payout: number; ballTurns: number; lastTick: number; hops: Array<{ at: number; dr: number }>; landed: boolean }
@@ -58,30 +58,30 @@ export class RouletteScene extends TableScene {
     this.ball = this.add.image(CX, CY - 215, 'ball').setScale(4).setDepth(4);
     this.pointer = this.add.graphics().setDepth(5);
     this.drawPointer(false);
-    this.cb = new CobradorSprite(this, 675, 270, 2).setDepth(6);
+    this.cb = new CobradorSprite(this, 676, 300, 2).setDepth(6);
     this.time.addEvent({ delay: 700, loop: true, callback: () => { if (!this.anim) this.eye.setTexture(`sym-ojo-${Phaser.Utils.Array.GetRandom(['abierto', 'izq', 'der', 'cerrado', 'abierto'])}`); } });
 
     // casilla ganadora
-    this.chipFrame = this.add.nineslice(675, 440, 'ui-panel', undefined, 60, 52, 8, 8, 8, 8).setScale(2).setDepth(6);
-    this.chip = this.add.rectangle(675, 440, 96, 70, hex(C.felt)).setDepth(6);
-    this.chipTxt = label(this, 675, 440, '', { size: 56, color: C.textBright, align: 'center', origin: [0.5, 0.5], depth: 7 });
+    this.chipFrame = this.add.nineslice(676, 470, 'ui-panel', undefined, 60, 52, 8, 8, 8, 8).setScale(2).setDepth(6);
+    this.chip = this.add.rectangle(676, 470, 96, 70, hex(C.felt)).setDepth(6);
+    this.chipTxt = label(this, 676, 470, '', { size: 56, color: C.textBright, align: 'center', origin: [0.5, 0.5], depth: 7 });
 
     // apuestas exteriores
     OUTSIDE_KINDS.forEach((k, i) => {
-      const b = new Button(this, 830 + (i % 3) * 165, 190 + Math.floor(i / 3) * 76, 155, 64, T.roulette.kinds[k] as string, () => this.pickKind(k), { size: 32 });
+      const b = new Button(this, 860 + (i % 3) * 165, 190 + Math.floor(i / 3) * 76, 155, 64, T.roulette.kinds[k] as string, () => this.pickKind(k), { size: 32 });
       this.kindBtns.set(k, b);
       this.group.add(b, String(i + 1));
     });
-    label(this, 750, 350, T.roulette.pleno, { size: 32, color: C.textDim, depth: 5 });
-    this.group.add(new Button(this, 930, 400, 70, 64, '<', () => this.changePleno(-1), { size: 36 }), 'q');
-    this.plenoLabel = label(this, 1030, 380, '', { size: 48, color: C.textBright, align: 'center', depth: 5 });
-    this.group.add(new Button(this, 1130, 400, 70, 64, '>', () => this.changePleno(1), { size: 36 }), 'e');
-    this.plenoBtn = new Button(this, 1030, 470, 360, 60, `${T.roulette.pleno} ×36`, () => this.pickKind('pleno'), { size: 32 });
+    label(this, 790, 350, T.roulette.pleno, { size: 32, color: C.textDim, depth: 5 });
+    this.group.add(new Button(this, 960, 400, 70, 64, '<', () => this.changePleno(-1), { size: 36 }), 'q');
+    this.plenoLabel = label(this, 1060, 380, '', { size: 48, color: C.textBright, align: 'center', depth: 5 });
+    this.group.add(new Button(this, 1160, 400, 70, 64, '>', () => this.changePleno(1), { size: 36 }), 'e');
+    this.plenoBtn = new Button(this, 1060, 470, 360, 60, `${T.roulette.pleno} ×36`, () => this.pickKind('pleno'), { size: 32 });
     this.group.add(this.plenoBtn);
-    label(this, 750, 520, T.roulette.plenoHelp, { size: 22, color: C.textDim, depth: 5 });
-    label(this, 750, 556, T.roulette.bet, { size: 28, color: C.textDim, depth: 5 });
-    this.betRow(1030, 620, 100, 10, 30);
-    this.spinBtn = new Button(this, 1030, 696, 380, 70, T.roulette.spin, () => this.start(), { size: 36 });
+    label(this, 790, 520, T.roulette.plenoHelp, { size: 22, color: C.textDim, depth: 5 });
+    label(this, 790, 556, T.roulette.bet, { size: 28, color: C.textDim, depth: 5 });
+    this.betRow(1060, 620, 96, 8, 28);
+    this.spinBtn = new Button(this, 1060, 696, 380, 70, T.roulette.spin, () => this.start(), { size: 36 });
     this.group.add(this.spinBtn, ' ');
     this.pickKind('rojo');
     this.say(T.night.intro(session.run.night));

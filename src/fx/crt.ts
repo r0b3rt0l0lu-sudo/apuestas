@@ -11,7 +11,7 @@ export class CrtScene extends Phaser.Scene {
     if (!this.textures.exists('scan')) {
       const c = this.textures.createCanvas('scan', 4, 4);
       const x = c?.getContext();
-      if (x) { x.fillStyle = 'rgba(0,0,0,0.28)'; x.fillRect(0, 0, 4, 1); c?.refresh(); }
+      if (x) { x.fillStyle = 'rgba(0,0,0,0.22)'; x.fillRect(0, 0, 4, 1); c?.refresh(); }
       const v = this.textures.createCanvas('vignette', 128, 80);
       const vx = v?.getContext();
       if (vx) {

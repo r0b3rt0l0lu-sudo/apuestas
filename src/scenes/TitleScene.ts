@@ -34,9 +34,9 @@ export class TitleScene extends Phaser.Scene {
     const sub = label(this, W / 2, 128, T.subtitle, { size: 32, color: C.textDim, align: 'center', depth: 10 });
     this.tweens.add({ targets: sub, alpha: { from: 0.55, to: 1 }, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
 
-    const cb = new CobradorSprite(this, W / 2, 400, 6);
+    const cb = new CobradorSprite(this, W / 2, 410, 5);
     cb.setDepth(8);
-    this.tweens.add({ targets: cb, y: 392, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    this.tweens.add({ targets: cb, y: 400, duration: 2400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     this.group = new FocusGroup(this);
     this.buildMenu();
     sfx.ambience('hub');

@@ -63,7 +63,7 @@ export class SlotsScene extends TableScene {
     const curses = cursesFor(session.run.night);
     this.marquee = label(this, W / 2, 106, T.slots.title, { title: true, size: 32, align: 'center', color: C.lamp, depth: 5 });
     lampFlicker(this, [this.marquee], 1);
-    this.cb = new CobradorSprite(this, 150, 340, 4).setDepth(8);
+    this.cb = new CobradorSprite(this, 150, 420, 3).setDepth(8);
 
     XS.forEach((x, i) => {
       this.add.rectangle(x, CY, 120, WIN_H, hex(PAPER_COLOR)).setDepth(2);

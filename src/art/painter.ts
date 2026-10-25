@@ -158,6 +158,7 @@ declare module './painter' {
     scatter(x: number, y: number, w: number, h: number, c: string, density: number, seed?: number): Painter;
     fillBevel(pts: ReadonlyArray<readonly [number, number]>, r: Ramp, opts?: { grad?: boolean; depth?: number }): Painter;
     inside(x: number, y: number): boolean;
+    grade(): Painter;
   }
 }
 
@@ -242,6 +243,25 @@ Painter.prototype.fillBevel = function (this: Painter, pts, r, opts = {}) {
       this.px(x, y, c);
     }
   }
+  return this;
+};
+
+/**
+ * Corrección de color global del juego: aplasta los negros, quita los grises medios
+ * (curva de contraste) y satura. Se aplica a todas las texturas al crearlas.
+ */
+export const GRADE = { black: 0.05, gamma: 1.32, sat: 1.28 };
+Painter.prototype.grade = function (this: Painter) {
+  const img = this.ctx.getImageData(0, 0, this.w, this.h), d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    if ((d[i + 3] as number) === 0) continue;
+    let r = (d[i] as number) / 255, g = (d[i + 1] as number) / 255, b = (d[i + 2] as number) / 255;
+    const l = 0.3 * r + 0.59 * g + 0.11 * b;
+    r = l + (r - l) * GRADE.sat; g = l + (g - l) * GRADE.sat; b = l + (b - l) * GRADE.sat;
+    const f = (v: number) => Math.pow(Math.max(0, Math.min(1, (v - GRADE.black) / (1 - GRADE.black))), GRADE.gamma);
+    d[i] = Math.round(f(r) * 255); d[i + 1] = Math.round(f(g) * 255); d[i + 2] = Math.round(f(b) * 255);
+  }
+  this.ctx.putImageData(img, 0, 0);
   return this;
 };
 

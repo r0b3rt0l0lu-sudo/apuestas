@@ -33,7 +33,7 @@ export class HubScene extends Phaser.Scene {
     sfx.ambience('hub');
     this.add.text(W / 2, 100, T.hub.title, { fontFamily: 'Special Elite', fontSize: '40px', color: C.textBright }).setOrigin(0.5, 0).setResolution(1);
 
-    this.cb = new CobradorSprite(this, 240, 410, 5).setDepth(8);
+    this.cb = new CobradorSprite(this, 240, 430, 4).setDepth(8);
     this.cb.setAlpha(0);
     this.tweens.add({ targets: this.cb, alpha: 1, x: { from: 200, to: 240 }, duration: 700, ease: 'Quad.easeOut' });
     const d = dialogue(this, 40, 640, 1200, 140);

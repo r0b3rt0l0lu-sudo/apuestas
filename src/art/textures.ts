@@ -7,8 +7,9 @@ import * as props from './props';
 import * as sc from './scenery';
 import * as ui from './ui';
 
-function add(scene: Phaser.Scene, key: string, p: Painter): void {
+function add(scene: Phaser.Scene, key: string, p: Painter, graded = true): void {
   if (scene.textures.exists(key)) scene.textures.remove(key);
+  if (graded) p.grade();
   const tex = scene.textures.addCanvas(key, p.canvas);
   tex?.setFilter(0); // NEAREST
 }
@@ -17,24 +18,29 @@ export const WHEEL_FRAMES = 48;
 
 /** Genera todas las texturas del juego (todo pixel art dibujado por código). */
 export function buildTextures(scene: Phaser.Scene): void {
-  // El Cobrador por capas
-  add(scene, 'cb-base', cb.drawBase());
+  // El Cobrador por capas (96×96)
+  for (let f = 0; f < 4; f++) add(scene, `cb-tend-${f}`, cb.drawTendrils(f));
+  add(scene, 'cb-body', cb.drawBody());
+  add(scene, 'cb-head', cb.drawHead());
+  for (const f of [0, 1] as const) add(scene, `cb-hat-${f}`, cb.drawHat(f));
   for (const m of cb.MOODS) {
-    add(scene, `cb-eye-${m}`, cb.drawEye(m));
+    add(scene, `cb-eyew-${m}`, cb.drawEyeWhite(m));
+    add(scene, `cb-pupil-${m}`, cb.drawPupil(m));
     add(scene, `cb-brow-${m}`, cb.drawBrow(m));
-    add(scene, `cb-mouth-${m}`, cb.drawMouth(m));
-    add(scene, `cb-glitch-${m}`, cb.outlined(cb.drawGlitch(m, false)));
-    add(scene, `cb-glitchsoft-${m}`, cb.outlined(cb.drawGlitch(m, true)));
+    for (let f = 0; f < (m === 'cobra' ? 4 : 2); f++) add(scene, `cb-mouth-${m}-${f}`, cb.drawMouth(m, f));
+    add(scene, `cb-glitch-${m}`, cb.drawGlitch(m, false));
+    add(scene, `cb-glitchsoft-${m}`, cb.drawGlitch(m, true));
   }
+  for (let f = 0; f < 3; f++) { add(scene, `cb-lid-${f}`, cb.drawLid(f)); add(scene, `cb-third-${f}`, cb.drawThird(f)); add(scene, `cb-sock-${f}`, cb.drawSocketLight(f, false)); add(scene, `cb-sockr-${f}`, cb.drawSocketLight(f, true)); add(scene, `cb-chain-${f}`, cb.drawChain(f)); }
+  for (let f = 0; f < 4; f++) { add(scene, `cb-ooze-${f}`, cb.drawOoze(f)); add(scene, `cb-rhand-${f}`, cb.drawRightHand(f)); add(scene, `cb-pend-${f}`, cb.drawPendulum(f)); }
   for (const f of [0, 1] as const) {
     add(scene, `cb-glow-${f}`, cb.drawGlow(f, false));
     add(scene, `cb-glowr-${f}`, cb.drawGlow(f, true));
     add(scene, `cb-halo-${f}`, cb.drawHalo(f, false));
     add(scene, `cb-halor-${f}`, cb.drawHalo(f, true));
     add(scene, `cb-moth-${f}`, cb.drawMoth(f));
-    add(scene, `cb-fingers-${f}`, cb.drawFingers(f));
+    add(scene, `cb-lhand-${f}`, cb.drawLeftHand(f));
   }
-  add(scene, 'cb-socket', cb.drawSocketDot());
   add(scene, 'cb-glint', cb.drawGlint());
 
   // Caballitos: uno por caballo de la carrera, y las 7 skins como referencia

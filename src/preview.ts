@@ -37,12 +37,8 @@ if (set === 'dawn') { const d = sc.drawDawnSky(); const base = new Painter(sc.SW
 
 if (set === 'cb') {
   const cb = await import('./art/cobrador');
-  for (const m of cb.MOODS) {
-    const base = new Painter(64, 64).blit(cb.drawBase());
-    [cb.drawGlow(0, m === 'cobra'), cb.drawSocketDot(), cb.drawMoth(0), cb.drawFingers(0), cb.drawEye(m), cb.drawHalo(0, m === 'cobra'), cb.drawBrow(m), cb.drawMouth(m)].forEach((l) => base.blit(l));
-    show(base, 8, [], '#1a1218');
-  }
-  show(cb.drawGlitch('sonrisa', false), 8, [], '#1a1218');
+  for (const m of cb.MOODS) show(cb.composeStill(m).grade(), 6, [], '#000');
+  show(cb.drawGlitch('sonrisa', false).grade(), 6, [], '#000');
 }
 
 if (set === 'horse') {

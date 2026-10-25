@@ -63,12 +63,12 @@ export class RaceScene extends TableScene {
     for (let y = 0; y < 6 * LANE_H; y += 12) for (let k = 0; k < 2; k++) {
       g.fillStyle((y / 12 + k) % 2 ? hex(C.bone) : hex(C.bg)).fillRect(X1 + 8 + k * 12, LANE_Y0 + y, 12, 12);
     }
-    this.cb = new CobradorSprite(this, 1190, 690, 2);
+    this.cb = new CobradorSprite(this, 1170, 696, 2);
     this.bannerBg = this.add.nineslice(W / 2, 300, 'ui-dialog', undefined, 240, 40, 8, 8, 8, 8).setScale(2).setDepth(19).setVisible(false);
     this.banner = label(this, W / 2, 300, '', { size: 56, color: C.lamp, align: 'center', origin: [0.5, 0.5], depth: 20 });
     label(this, 40, 646, T.race.bet, { size: 28, color: C.textDim, depth: 5 });
     this.betRow(560, 660, 130, 14, 32);
-    this.goBtn = new Button(this, 940, 660, 360, 70, T.race.go, () => this.start(), { size: 40 });
+    this.goBtn = new Button(this, 900, 660, 300, 70, T.race.go, () => this.start(), { size: 40 });
     this.group.add(this.goBtn, ' ');
     this.refreshPick();
     this.say(T.night.intro(session.run.night));

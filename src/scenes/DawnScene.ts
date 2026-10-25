@@ -34,7 +34,7 @@ export class DawnScene extends Phaser.Scene {
       T.dawn.left(r.forgiven ? r.balance : r.balance - q)
     ];
     label(this, W / 2, 208, lines.join('\n'), { size: 40, align: 'center', color: C.lamp, depth: 5 });
-    const cb = new CobradorSprite(this, 330, 500, 5).setMood('sonrisa').setDepth(6);
+    const cb = new CobradorSprite(this, 300, 500, 4).setMood('sonrisa').setDepth(6);
     this.tweens.add({ targets: cb, y: { from: 560, to: 500 }, alpha: { from: 0, to: 1 }, duration: 800, ease: 'Back.easeOut' });
     const next = r.night >= LAST_NIGHT ? T.dawn.lastNext : T.dawn.next(T.night.nextWords[nightDef(r.night + 1).night - 1] ?? '');
     this.add.nineslice(880, 372, 'ui-dialog', undefined, 300, 36, 8, 8, 8, 8).setScale(2).setDepth(4);

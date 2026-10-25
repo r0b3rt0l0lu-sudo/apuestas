@@ -53,14 +53,14 @@ export class DuelScene extends Phaser.Scene {
     this.fx = new FX(this, 2);
     this.add.nineslice(W / 2, 40, 'ui-panel', undefined, 190, 22, 8, 8, 8, 8).setScale(2).setDepth(4);
     label(this, W / 2, 14, T.duel.title, { title: true, size: 32, align: 'center', color: C.textBright, depth: 5 });
-    this.cb = new CobradorSprite(this, W / 2, 286, 5);
+    this.cb = new CobradorSprite(this, W / 2, 320, 4);
     this.cb.setDepth(3);
-    this.tweens.add({ targets: this.cb, y: { from: -40 + 286, to: 286 }, duration: 800, ease: 'Bounce.easeOut' });
-    this.gun = this.add.image(W / 2, 560, 'trabuco-up').setScale(4).setDepth(10);
+    this.tweens.add({ targets: this.cb, y: { from: 280, to: 320 }, duration: 800, ease: 'Bounce.easeOut' });
+    this.gun = this.add.image(W / 2, 610, 'trabuco-up').setScale(4).setDepth(10);
     this.info = label(this, W / 2, 78, '', { size: 32, color: C.lamp, align: 'center', depth: 5 });
-    this.msg = label(this, W / 2, 436, '', { size: 32, color: C.textBright, align: 'center', wrap: 1000, depth: 5 });
+    this.msg = label(this, W / 2, 468, '', { size: 32, color: C.textBright, align: 'center', wrap: 1000, depth: 5 });
     this.tw = new Typewriter(this, this.msg, 50);
-    this.known = label(this, W / 2, 474, '', { size: 28, color: C.lamp, align: 'center', depth: 5 });
+    this.known = label(this, W / 2, 504, '', { size: 28, color: C.lamp, align: 'center', depth: 5 });
     this.pow = label(this, 40, 480, '', { size: 24, color: C.dangerText, depth: 5 });
 
     label(this, 60, 140, 'COBRADOR', { size: 28, color: C.textDim, depth: 5 });
@@ -94,7 +94,7 @@ export class DuelScene extends Phaser.Scene {
     this.shells = Array.from({ length: n }, (_, i) => {
       const x = W / 2 + (i - (n - 1) / 2) * 34;
       const col = show ? (i < real ? C.danger : C.textDim) : C.wood;
-      const r = this.add.rectangle(x, 128, 22, 34, hex(col)).setStrokeStyle(2, 0x0d0a0e).setDepth(5);
+      const r = this.add.rectangle(x, 112, 22, 34, hex(col)).setStrokeStyle(2, 0x0d0a0e).setDepth(5);
       this.tweens.add({ targets: r, scaleY: { from: 0.1, to: 1 }, duration: 180, delay: i * 40, ease: 'Back.easeOut' });
       return r;
     });
@@ -184,7 +184,7 @@ export class DuelScene extends Phaser.Scene {
     this.msg.setText(who === 'player' ? (onSelf ? T.duel.youShootSelf : T.duel.youShootBoss) : (onSelf ? T.duel.bossShootsSelf : T.duel.bossShootsYou));
     // apuntar (0,55 s, easeOutBack) y esperar hasta 1,3 s desde el inicio del apuntado
     const towardsBoss = (who === 'player') !== onSelf;
-    const restY = who === 'player' ? 560 : 330;
+    const restY = who === 'player' ? 610 : 360;
     this.gun.setTexture(towardsBoss ? 'trabuco-up' : 'trabuco-down').setPosition(W / 2, restY).setVisible(true);
     sfx.aim();
     const targetY = restY + (towardsBoss ? -70 : 70);
@@ -205,7 +205,7 @@ export class DuelScene extends Phaser.Scene {
       this.tweens.add({ targets: this.gun, y: targetY + (towardsBoss ? 26 : -26), duration: 70, yoyo: true, ease: 'Quad.easeOut' }); // retroceso
       flash(this, hex(C.lamp), 600, 0.5);
       if (victimIsPlayer) { shake(this, 5, 150, 8); flash(this, hex(C.blood), 700, 0.6); this.cb.setMood('sonrisa'); }
-      else { this.cb.flinch(1); this.fx.sparks(W / 2, 270, 18, 0xe0503c, 380); this.cb.setMood(this.d.hp.boss <= 1 ? 'cobra' : 'acecho'); }
+      else { this.cb.flinch(1); this.fx.sparks(W / 2, 300, 18, 0xe0503c, 380); this.cb.setMood(this.d.hp.boss <= 1 ? 'cobra' : 'acecho'); }
       this.msg.setText(T.duel.bang);
     } else {
       sfx.blank();

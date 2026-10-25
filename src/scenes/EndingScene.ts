@@ -24,7 +24,7 @@ export class EndingScene extends Phaser.Scene {
     t.setAlpha(0); this.tweens.add({ targets: t, alpha: 1, y: 64, duration: 1600 });
     this.add.nineslice(W / 2, 330, 'ui-panel', undefined, 240, 130, 8, 8, 8, 8).setScale(2).setDepth(4).setAlpha(0.9);
     label(this, W / 2, 220, T.ending.lines.join('\n\n'), { size: 36, align: 'center', color: C.textBright, wrap: 900, depth: 5 });
-    new CobradorSprite(this, W / 2, 600, 3).setMood('acecho').setDepth(6);
+    new CobradorSprite(this, W / 2, 560, 3).setMood('acecho').setDepth(6);
     const g = new FocusGroup(this);
     g.add(new Button(this, W / 2, 730, 520, 80, T.ending.again, () => { session.startNew(); fadeTo(this, 'Hub'); }, { size: 36 }));
   }

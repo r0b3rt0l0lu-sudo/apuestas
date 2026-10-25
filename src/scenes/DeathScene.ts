@@ -20,7 +20,7 @@ export class DeathScene extends Phaser.Scene {
     this.add.rectangle(W / 2, H / 2, W, H, hex('#0A0608'));
     const fx = new FX(this, 2);
     const candle = new Candle(this, 140, 650, 6);
-    const cb = new CobradorSprite(this, W / 2, 400, 5).setMood('cobra').setScale(0.45).setAlpha(0.9);
+    const cb = new CobradorSprite(this, W / 2, 400, 4).setMood('cobra', true).setScale(0.45).setAlpha(0.95);
     const black = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 1).setDepth(100).setAlpha(0);
     const title = label(this, W / 2, 250, T.death.title, { title: true, size: 96, align: 'center', color: C.eyeRed, depth: 101 }).setAlpha(0);
     const sub = label(this, W / 2, 400, [...T.death.sub, T.death.nights(r.night)].join('\n'), { size: 40, align: 'center', color: C.text, depth: 101 }).setAlpha(0);
