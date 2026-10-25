@@ -1,5 +1,5 @@
 import { sfx } from '../../audio/sfx';
-import { nightDef } from '../../core/nights';
+import { ENDLESS, nightDef } from '../../core/nights';
 import { quotaOfRun, session } from '../../core/session';
 import { T, fmt } from '../../i18n/es';
 import { el, urls } from './kit';
@@ -22,6 +22,7 @@ export class HudDom {
   private lastActions: number;
   private pulse = 0;
   private pulseTimer: number;
+  private lastTolls = session.run.tolls;
 
   constructor(parent: HTMLElement) {
     this.root = el('div', 'hud hit', '', parent);
@@ -49,9 +50,11 @@ export class HudDom {
   }
 
   private paintGauge(): void {
-    const q = quotaOfRun(session.run);
-    const filled = Math.floor(Math.min(1, this.shown / q) * 28 + 0.001);
-    const met = this.shown >= q;
+    const r = session.run, q = quotaOfRun(r);
+    // modo infinito: la barra marca cuánto falta para el próximo cobro de la casa
+    const endless = r.mode === 'endless';
+    const filled = endless ? Math.floor(((r.plays % ENDLESS.tollEvery) / ENDLESS.tollEvery) * 28 + 0.001) : Math.floor(Math.min(1, this.shown / q) * 28 + 0.001);
+    const met = !endless && this.shown >= q;
     this.gauge.classList.toggle('met', met);
     this.segs.forEach((s, i) => { s.className = i < filled ? (met && this.pulse % 2 === 0 ? 'on hot' : 'on') : ''; });
   }
@@ -59,9 +62,14 @@ export class HudDom {
   refresh(): void {
     if (this.frozen) return;
     const r = session.run, q = quotaOfRun(r), d = nightDef(r.night);
-    this.night.textContent = `${T.hud.night} ${r.night}/7`;
-    this.quota.textContent = `${T.hud.quota} ${fmt(q)}`;
-    this.acts.textContent = `${T.hud.actions} ${r.actionsLeft}`;
+    const endless = r.mode === 'endless';
+    this.night.textContent = endless ? `${T.hud.endless} · ${T.hud.peak} ${fmt(r.peak)}` : `${T.hud.night} ${r.night}/7`;
+    this.quota.textContent = endless ? T.hud.toll(ENDLESS.tollEvery - (r.plays % ENDLESS.tollEvery)) : `${T.hud.quota} ${fmt(q)}`;
+    this.acts.textContent = endless ? `${T.hud.plays} ${r.plays}` : `${T.hud.actions} ${r.actionsLeft}`;
+    if (r.tolls > this.lastTolls) {
+      this.lastTolls = r.tolls;
+      this.tollNotice(r.lastToll);
+    }
     if (r.balance !== this.target) {
       const delta = r.balance - this.target;
       this.target = r.balance;
@@ -84,12 +92,20 @@ export class HudDom {
     }
     // velas: la que se acaba de gastar se apaga con un parpadeo
     this.ticks.textContent = '';
-    for (let i = 0; i < d.actions; i++) {
+    for (let i = 0; i < (endless ? 0 : d.actions); i++) {
       const on = i < r.actionsLeft;
       const im = el('img', on ? '' : i === r.actionsLeft && this.lastActions > r.actionsLeft ? 'snuff' : '', '', this.ticks) as HTMLImageElement;
       im.src = (on ? urls.tickOn : urls.tickOff) as string;
     }
     this.lastActions = r.actionsLeft;
+  }
+
+  /** La casa cobra: aviso rojo grande bajo la barra y un susurro. */
+  private tollNotice(x: number): void {
+    const n = el('div', 'float', T.hud.tollNow(x), this.root);
+    Object.assign(n.style, { left: '0', right: '0', top: '90px', textAlign: 'center', fontSize: '44px', color: '#c24a3a' });
+    sfx.whisper();
+    window.setTimeout(() => n.remove(), 2200);
   }
 
   private floatDelta(delta: number): void {

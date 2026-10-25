@@ -138,6 +138,11 @@ export class Cigarette extends THREE.Group {
     }
   }
 
+  /** Los espejos (Reflector) clonan la cámara con sus hijos: el cigarro no se duplica. */
+  override clone(): this {
+    return new THREE.Group() as unknown as this;
+  }
+
   get busy(): boolean { return this.phase !== 'off' && this.phase !== 'rest'; }
 
   private setLen(l: number): void {

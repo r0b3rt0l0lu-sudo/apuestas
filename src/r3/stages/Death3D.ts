@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { sfx } from '../../audio/sfx';
+import { rankFor } from '../../core/nights';
 import { session } from '../../core/session';
 import { T } from '../../i18n/es';
 import { attachNav, btn, el } from '../../ui/dom/kit';
@@ -45,11 +46,15 @@ export class Death3D extends Stage {
     Object.assign(black.style, { inset: '0', background: '#000', opacity: '0' });
     const title = el('div', 'title center abs', T.death.title, this.ui);
     Object.assign(title.style, { left: '0', right: '0', top: '240px', fontSize: '110px', color: '#9c3c28', opacity: '0' });
-    const sub = el('div', 'center abs txt', [...T.death.sub, T.death.nights(r.night)].join('\n'), this.ui);
+    const endless = r.mode === 'endless';
+    const rank = T.endless.ranks[rankFor(r.peak)] ?? '';
+    const newBest = endless && r.peak >= session.best();
+    const subLines = endless ? [...T.endless.deathSub, T.endless.score(r.peak, rank), ...(newBest ? [T.endless.newBest] : [])] : [...T.death.sub, T.death.nights(r.night)];
+    const sub = el('div', 'center abs txt', subLines.join('\n'), this.ui);
     Object.assign(sub.style, { left: '0', right: '0', top: '400px', fontSize: '40px', whiteSpace: 'pre-line', opacity: '0' });
     const row = el('div', 'abs hit', '', this.ui);
     Object.assign(row.style, { left: '380px', top: '580px', width: '520px', opacity: '0' });
-    const b = btn(row, T.death.again, () => { session.startNew(); goPhase(); }, { cls: 'big', style: { width: '100%' } });
+    const b = btn(row, endless ? T.endless.again : T.death.again, () => { session.startNew(undefined, endless ? 'endless' : 'campaign'); goPhase(); }, { cls: 'big', style: { width: '100%' } });
     b.disabled = true;
     this.detach = attachNav(this.ui);
 

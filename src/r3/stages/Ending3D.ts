@@ -6,7 +6,7 @@ import { attachNav, btn, el } from '../../ui/dom/kit';
 import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
 import { Fx3D } from '../fx3d';
-import { goHub, goPhase } from '../router';
+import { goPhase } from '../router';
 import { Stage } from '../stage';
 import { dawnWorld } from './Dawn3D';
 
@@ -29,14 +29,15 @@ export class Ending3D extends Stage {
     this.scene.add(this.cob);
     this.camera.position.set(0, 1.8, 7.5);
     this.camera.lookAt(0, 2.2, -10);
-    const t = el('div', 'title center abs', T.ending.title, this.ui);
+    const endless = session.run.mode === 'endless';
+    const t = el('div', 'title center abs', endless ? T.endless.winTitle : T.ending.title, this.ui);
     Object.assign(t.style, { left: '0', right: '0', top: '40px', fontSize: '84px', color: '#ece0c0' });
     const pan = el('div', 'abs frame panel center', '', this.ui);
     Object.assign(pan.style, { left: '260px', top: '170px', width: '760px', fontSize: '36px', color: '#ece0c0', padding: '6px 14px 12px', lineHeight: '1.15' });
-    T.ending.lines.forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
+    (endless ? [...T.endless.winLines, T.endless.score(session.run.peak, T.endless.ranks.banca ?? '')] : T.ending.lines).forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
     const row = el('div', 'abs hit', '', this.ui);
     Object.assign(row.style, { left: '380px', top: '690px', width: '520px' });
-    btn(row, T.ending.again, () => { session.startNew(); goHub(); }, { cls: 'big', style: { width: '100%' } });
+    btn(row, endless ? T.endless.again : T.ending.again, () => { session.startNew(undefined, endless ? 'endless' : 'campaign'); goPhase(); }, { cls: 'big', style: { width: '100%' } });
     this.detach = attachNav(this.ui);
   }
 

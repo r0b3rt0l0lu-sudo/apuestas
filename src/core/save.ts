@@ -2,6 +2,7 @@ import { type RunState, SAVE_VERSION } from './state';
 
 const RUN_KEY = 'ultima-feria.run';
 const OPT_KEY = 'ultima-feria.options';
+const BEST_KEY = 'ultima-feria.best';
 
 export interface Options {
   volume: number;
@@ -31,7 +32,17 @@ export function loadRun(s: Store | null = store()): RunState | null {
     // Si la versión no coincide se descarta sin romper nada.
     if (data.version !== SAVE_VERSION || typeof data.balance !== 'number') return null;
     // Guardados anteriores a la hipoteca: se completan los campos nuevos.
-    return { ...data, debt: data.debt ?? 0, mortgaged: data.mortgaged ?? false, forgiven: data.forgiven ?? false } as RunState;
+    return {
+      ...data,
+      mode: data.mode ?? 'campaign',
+      debt: data.debt ?? 0,
+      mortgaged: data.mortgaged ?? false,
+      forgiven: data.forgiven ?? false,
+      plays: data.plays ?? 0,
+      peak: data.peak ?? data.balance,
+      tolls: data.tolls ?? 0,
+      lastToll: data.lastToll ?? 0
+    } as RunState;
   } catch {
     return null;
   }
@@ -68,4 +79,24 @@ export function saveOptions(o: Options, s: Store | null = store()): void {
   } catch {
     /* sin almacenamiento */
   }
+}
+
+/** Mejor saldo máximo del modo infinito (récord personal). */
+export function loadBest(s: Store | null = store()): number {
+  try {
+    const n = Number(s?.getItem(BEST_KEY));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function saveBest(v: number, s: Store | null = store()): number {
+  const best = Math.max(loadBest(s), v);
+  try {
+    s?.setItem(BEST_KEY, String(best));
+  } catch {
+    /* sin almacenamiento */
+  }
+  return best;
 }

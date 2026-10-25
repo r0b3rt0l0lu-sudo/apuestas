@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { sfx } from '../../audio/sfx';
 import { drawWheel } from '../../art/wheel';
-import { brickTex, curtainTex, woodTex } from '../../art/tex3d';
+import { curtainTex, woodTex } from '../../art/tex3d';
 import { GAMES, type Game, TABLES, canPlay, minBet } from '../../core/economy';
-import { mortgageOffers } from '../../core/nights';
+import { mortgageOffers, rankFor, tollFor } from '../../core/nights';
 import { session } from '../../core/session';
 import { canMortgage, quotaMet } from '../../core/state';
 import { T } from '../../i18n/es';
@@ -15,6 +15,7 @@ import { Typewriter } from '../../ui/dom/typewriter';
 import { Cigarette } from '../cigarette';
 import { Cobrador3D } from '../cobrador3d';
 import { FpsControls, type Solid } from '../fps';
+import { HubWorld, type Spot } from '../hubworld';
 import { engine } from '../engine';
 import { bulbString, box, carousel, cyl, glow, lam, mesh, reelDrum, rouletteTable, slotMachine } from '../models';
 import { goPhase, goTable } from '../router';
@@ -54,6 +55,12 @@ export class Hub3D extends Stage {
   private cig!: Cigarette;
   private stations: Station[] = [];
   private fps!: FpsControls;
+  private world!: HubWorld;
+  private nearSpot: Spot | null = null;
+  private caption!: HTMLElement;
+  private room: string | null = null;
+  private nextEvent = 25;
+  private blackout = 0;
   private deskSolid: Solid = { x: 0, z: -7.5, hx: 2.4, hz: 0.8 };
   private near: Station | null = null;
   private listeners: Array<[string, EventListener, EventTarget]> = [];
@@ -67,7 +74,7 @@ export class Hub3D extends Stage {
     if (r.phase === 'playing') session.dispatch({ type: 'leaveTable' });
     this.light(640, 400, 1250, 0.5);
     sfx.ambience('hub');
-    this.fps = new FpsControls(this.camera, engine.canvas, { minX: -HALF_X, maxX: HALF_X, minZ: Z_MIN, maxZ: Z_MAX }, { eye: EYE, radius: 0.35, speed: 3.3 });
+    this.fps = new FpsControls(this.camera, engine.canvas, { minX: -16.6, maxX: 17.2, minZ: -17.9, maxZ: 7.0 }, { eye: EYE, radius: 0.35, speed: 3.3 });
     this.fps.pos.set(0, EYE, 5);
     const sc = this.scene;
     sc.background = new THREE.Color(0x000000);
@@ -75,6 +82,8 @@ export class Hub3D extends Stage {
     sc.add(new THREE.AmbientLight(0x4a3858, 1.9));
     this.buildRoom();
     this.buildStations();
+    this.world = new HubWorld(this.scene, this.solids, (text, whisper) => { void this.tw.say(text, whisper); });
+    this.world.build();
     this.buildCobrador();
 
     if (saved && saved.night === r.night) {
@@ -98,9 +107,11 @@ export class Hub3D extends Stage {
     Object.assign(hint.style, { position: 'absolute', left: '0', right: '0', top: '92px', textAlign: 'center', fontSize: '22px', color: '#9c9278', textShadow: '2px 2px 0 #000' });
     const opts = btn(this.ui, T.options, () => openOptions(this.ui), { cls: 'small', style: { position: 'absolute', left: '16px', top: '100px' } });
     opts.classList.add('hit');
+    this.caption = el('div', 'title abs center', '', this.ui);
+    Object.assign(this.caption.style, { left: '0', right: '0', top: '150px', fontSize: '54px', color: '#ece0c0', opacity: '0', transition: 'opacity .8s', textShadow: '3px 3px 0 #000, 0 0 18px #c24a3a', pointerEvents: 'none' });
     this.buildSleep();
     this.stations.forEach((s) => {
-      const l = el('div', '', T.hub[s.game], this.ui);
+      const l = el('div', '', s.game === 'mortgage' && session.run.mode === 'endless' ? T.endless.house : T.hub[s.game], this.ui);
       Object.assign(l.style, { position: 'absolute', transform: 'translate(-50%,-50%)', fontFamily: "'Special Elite', serif", fontSize: '32px', color: '#ece0c0', textShadow: '2px 2px 0 #000, -2px 2px 0 #000, 0 0 14px #c24a3a', whiteSpace: 'nowrap', pointerEvents: 'none', display: 'none' });
       this.labels.push({ el: l, s });
     });
@@ -121,17 +132,6 @@ export class Hub3D extends Stage {
     ceil.rotation.x = Math.PI / 2;
     ceil.position.set(0, h, cz);
     sc.add(ceil);
-    const wall = (ww: number, x: number, z: number, ry: number): THREE.Mesh => {
-      const m = new THREE.Mesh(new THREE.PlaneGeometry(ww, h), lam(0xffffff, tex(`hub-brick-${Math.round(ww)}`, () => brickTex('#3a1018'), [ww / 2, 2])));
-      m.position.set(x, h / 2, z);
-      m.rotation.y = ry;
-      sc.add(m);
-      return m;
-    };
-    wall(w, 0, Z_MIN, 0);
-    wall(w, 0, Z_MAX, Math.PI);
-    wall(d, -HALF_X, cz, Math.PI / 2);
-    wall(d, HALF_X, cz, -Math.PI / 2);
     // cortina tras El Cobrador y alfombra
     const cur = new THREE.Mesh(new THREE.PlaneGeometry(7, 4.2), lam(0xffffff, tex('hub-curtain', () => curtainTex('#8a1e28'), [4, 1])));
     cur.position.set(0, 2.3, Z_MIN + 0.05);
@@ -238,7 +238,7 @@ export class Hub3D extends Stage {
   }
 
   private buildSleep(): void {
-    if (!quotaMet(session.run)) return;
+    if (session.run.mode === 'endless' || !quotaMet(session.run)) return;
     this.sleepBtn = btn(this.ui, T.hub.sleep, () => this.sleep(), { cls: 'small', hotkey: 'z', style: { position: 'absolute', right: '16px', top: '100px' } });
     this.sleepBtn.classList.add('hit');
   }
@@ -286,25 +286,43 @@ export class Hub3D extends Stage {
   private updateNear(): void {
     let best: Station | null = null;
     const bd = REACH;
+    const here = this.world.roomAt(this.pos.x, this.pos.z);
     // entre varias mesas a mano gana la que miras
     const fx = -Math.sin(this.fps.yaw), fz = -Math.cos(this.fps.yaw);
     let bs = Infinity;
     for (const s of this.stations) {
       const d = this.stationDist(s);
-      if (d >= bd) continue;
+      if (d >= bd || here !== null) continue;
       const vx = s.solid.x - this.pos.x, vz = s.solid.z - this.pos.z;
       const facing = Math.max(0, (vx * fx + vz * fz) / (Math.hypot(vx, vz) || 1));
       const score = d - 1.2 * facing;
       if (score < bs) { bs = score; best = s; }
     }
     this.near = best;
+    this.nearSpot = null;
+    if (!best && !this.entering) {
+      let bs2 = Infinity;
+      for (const sp of this.world.spots) {
+        const d = Math.hypot(sp.x - this.pos.x, sp.z - this.pos.z);
+        if (d >= sp.reach || this.world.roomAt(sp.x, sp.z) !== here) continue;
+        const facing = Math.max(0, ((sp.x - this.pos.x) * fx + (sp.z - this.pos.z) * fz) / (d || 1));
+        const score = d - 1.0 * facing;
+        if (score < bs2) { bs2 = score; this.nearSpot = sp; }
+      }
+      if (this.nearSpot) {
+        this.prompt.style.display = 'block';
+        this.prompt.style.opacity = '1';
+        this.prompt.textContent = T.eggs.examine(T.eggs.names[this.nearSpot.id] ?? '');
+        return;
+      }
+    }
     if (!best || this.entering) { this.prompt.style.display = 'none'; return; }
     const r = session.run, g = best.game;
     this.prompt.style.display = 'block';
     if (g === 'mortgage') {
       const ok = canMortgage(r);
       this.prompt.style.opacity = ok ? '1' : '0.6';
-      this.prompt.textContent = `${T.hub.use(T.hub.mortgage)} · ${ok ? T.mortgage.hint : T.mortgage.done}`;
+      this.prompt.textContent = r.mode === 'endless' ? `${T.hub.use(T.endless.house)}` : `${T.hub.use(T.hub.mortgage)} · ${ok ? T.mortgage.hint : T.mortgage.done}`;
       return;
     }
     const ok = canPlay(g, r.balance, r.actionsLeft);
@@ -313,7 +331,8 @@ export class Hub3D extends Stage {
   }
 
   private interact(): void {
-    if (!this.near || this.entering || !this.fps.enabled) return;
+    if (this.entering || !this.fps.enabled) return;
+    if (!this.near) { this.nearSpot?.use(); return; }
     if (this.near.game === 'mortgage') this.openMortgage();
     else void this.enter(this.near.game);
   }
@@ -322,6 +341,11 @@ export class Hub3D extends Stage {
   private openMortgage(): void {
     const r = session.run;
     if (this.entering || !this.fps.enabled) return;
+    if (r.mode === 'endless') {
+      const next = tollFor(r.tolls, r.balance);
+      void this.tw.say(T.endless.desk(r.peak, Math.max(session.best(), r.peak), T.endless.ranks[rankFor(r.peak)] ?? '', r.plays, next), true);
+      return;
+    }
     if (!canMortgage(r)) { void this.tw.say(T.mortgage.refuse, true); return; }
     this.fps.setEnabled(false);
     const close = (): void => { ov.close(); this.fps.setEnabled(true); };
@@ -344,6 +368,15 @@ export class Hub3D extends Stage {
 
   private async intro(): Promise<void> {
     const r = session.run;
+    if (r.mode === 'endless') {
+      if (r.flags['intro-endless']) { await this.tw.say(T.endless.hubLine, true); return; }
+      session.dispatch({ type: 'flag', key: 'intro-endless' });
+      const wait = () => new Promise<void>((res) => { const timer = window.setTimeout(() => { this.waiting = null; res(); }, 2800); this.waiting = () => { window.clearTimeout(timer); this.waiting = null; res(); }; });
+      this.locked = true;
+      for (const line of T.endless.intro) { await this.tw.say(line, true); await wait(); }
+      this.locked = false;
+      return;
+    }
     const key = `intro-${r.night}`;
     if (r.flags[key]) { await this.tw.say(quotaMet(r) ? T.hub.quotaMet : T.night.intro(r.night), true); return; }
     // el diálogo avanza solo (Intro lo acelera) y nunca impide moverse ni entrar en una mesa
@@ -396,7 +429,7 @@ export class Hub3D extends Stage {
     this.spinC.rotation.y += dt * 0.4;
     this.horses.forEach((h, i) => { h.position.y = (h.userData.base as number) + Math.sin(t * 2.2 + i * 1.7) * 0.22; });
     this.bulbsA.update(t);
-    this.lamps.forEach((l, i) => { l.intensity = 20 * (1 - 0.15 * Math.max(0, Math.sin(t * 9 + i * 3) - 0.8) * 5); });
+    this.lamps.forEach((l, i) => { l.intensity = 20 * this.world.dim * (1 - 0.15 * Math.max(0, Math.sin(t * 9 + i * 3) - 0.8) * 5); });
     const p = engine.pointer;
     this.cobrador.setGaze((p.x - 640) / 500, (p.y - 300) / 300);
     this.cobrador.update(dt);
@@ -404,7 +437,35 @@ export class Hub3D extends Stage {
     if (this.entering) return;
     this.fps.update(dt);
     this.updateNear();
+    this.world.update(dt, t, this.pos, this.fps.yaw, this.fps.pitch);
+    this.worldLife(dt);
     this.placeLabels();
+  }
+
+  /** Cartel de sala al entrar y sucesos aleatorios: susurros, apagones, teléfono y golpes. */
+  private worldLife(dt: number): void {
+    const room = this.world.roomAt(this.pos.x, this.pos.z);
+    if (room !== this.room) {
+      this.room = room;
+      if (room) {
+        this.caption.textContent = T.eggs.rooms[room] ?? '';
+        this.caption.style.opacity = '1';
+        window.setTimeout(() => { this.caption.style.opacity = '0'; }, 2600);
+        sfx.whisper();
+      }
+    }
+    if (this.blackout > 0) {
+      this.blackout -= dt;
+      this.world.dim = this.blackout > 0 ? (session.options.reduceFlash ? 0.35 : 0.04) : 1;
+    }
+    this.nextEvent -= dt;
+    if (this.nextEvent > 0 || this.locked || this.entering || !this.fps.enabled) return;
+    this.nextEvent = 22 + Math.random() * 28;
+    const pick = Math.floor(Math.random() * 4);
+    if (pick === 0) { void this.tw.say(T.eggs.whispers[Math.floor(Math.random() * T.eggs.whispers.length)] ?? '', true); }
+    else if (pick === 1) { this.blackout = session.options.reduceFlash ? 1.2 : 0.55; sfx.glitch(); }
+    else if (pick === 2) { this.world.ring(); void this.tw.say(T.eggs.ring); }
+    else { sfx.thud(); sfx.thud(); void this.tw.say(T.eggs.knock, true); }
   }
 
   private placeLabels(): void {
@@ -417,7 +478,7 @@ export class Hub3D extends Stage {
       l.style.display = vis ? 'block' : 'none';
       if (!vis) continue;
       l.style.left = `${(v.x * 0.5 + 0.5) * 1280}px`;
-      l.style.top = `${(-v.y * 0.5 + 0.5) * 800}px`;
+      l.style.top = `${Math.max(150, Math.min(560, (-v.y * 0.5 + 0.5) * 800))}px`;
       l.style.opacity = this.near === s ? '1' : String(Math.max(0.8, 1 - d / 20));
     }
   }

@@ -54,3 +54,40 @@ export function mortgageOffers(night: number): MortgageOffer[] {
     return { amount, owed: Math.ceil(amount * (1 + MORTGAGE_RATE)) };
   });
 }
+
+/** Modo infinito: sin cuota ni noches; la casa cobra cada pocas jugadas y gana quien llega más alto. */
+export const ENDLESS = {
+  /** Fichas iniciales. */
+  start: 1000,
+  /** Acciones «infinitas» (cabe en el guardado, a diferencia de Infinity). */
+  actions: 9999,
+  /** La casa cobra cada tantas jugadas resueltas. */
+  tollEvery: 10,
+  /** Porcentaje del saldo del primer cobro y cuánto sube con cada uno (hasta el máximo). */
+  tollBase: 0.1,
+  tollStep: 0.02,
+  tollMax: 0.35,
+  /** Cobro mínimo. */
+  tollMin: 50,
+  /** Romper la banca: llegar a este saldo es ganar. */
+  bankBreak: 100_000
+} as const;
+
+/** Cobro de la casa: un porcentaje creciente del saldo (redondeado a 10), nunca más que el saldo. */
+export function tollFor(tollsSoFar: number, balance: number): number {
+  const pct = Math.min(ENDLESS.tollMax, ENDLESS.tollBase + ENDLESS.tollStep * tollsSoFar);
+  const raw = Math.max(ENDLESS.tollMin, Math.round((balance * pct) / 10) * 10);
+  return Math.min(balance, raw);
+}
+
+/** Rangos del modo infinito según el saldo máximo alcanzado. */
+export const RANKS: ReadonlyArray<{ from: number; id: 'novato' | 'jugador' | 'tiburon' | 'leyenda' | 'banca' }> = [
+  { from: 0, id: 'novato' },
+  { from: 2_500, id: 'jugador' },
+  { from: 10_000, id: 'tiburon' },
+  { from: 40_000, id: 'leyenda' },
+  { from: ENDLESS.bankBreak, id: 'banca' }
+];
+
+export const rankFor = (peak: number): (typeof RANKS)[number]['id'] =>
+  [...RANKS].reverse().find((r) => peak >= r.from)?.id ?? 'novato';

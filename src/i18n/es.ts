@@ -27,7 +27,34 @@ export const T = {
 
   opt: { volume: 'Volumen general', music: 'Música y ambiente', sfx: 'Efectos', reduceFlash: 'Reducir destellos y temblores', on: 'Sí', off: 'No' },
 
-  hud: { night: 'NOCHE', quota: 'CUOTA', balance: 'SALDO', actions: 'ACCIONES' },
+  hud: {
+    night: 'NOCHE', quota: 'CUOTA', balance: 'SALDO', actions: 'ACCIONES',
+    endless: 'INFINITO', peak: 'MÁX', plays: 'JUGADAS',
+    toll: (n: number) => `COBRO EN ${n}`,
+    tollNow: (x: number) => `LA CASA COBRA −${fmt(x)}`
+  },
+
+  endless: {
+    button: 'Modo infinito',
+    best: (n: number) => `Récord: ${fmt(n)}`,
+    confirm: 'Esto borrará la partida guardada. ¿Empezar el modo infinito?',
+    house: 'La Casa',
+    intro: [
+      '«Aquí no hay noches ni cuota. Solo hay casa.»',
+      `«Mil fichas. Cada diez jugadas, la casa cobra un poco más. Cuando no puedas apostar, se acabó.»`,
+      '«Llega a cien mil y rompes la banca. Nadie lo ha hecho.»'
+    ],
+    hubLine: '«Juega. La casa espera.»',
+    desk: (peak: number, best: number, rank: string, plays: number, toll: number) =>
+      `«Máximo: ${fmt(peak)}. Récord: ${fmt(best)}. Rango: ${rank}. Jugadas: ${plays}. Próximo cobro: ${fmt(toll)}.»`,
+    ranks: { novato: 'Novato', jugador: 'Jugador', tiburon: 'Tiburón', leyenda: 'Leyenda', banca: 'Rompebancas' } as Record<string, string>,
+    deathSub: ['«La casa se queda con lo que queda.»'],
+    score: (peak: number, rank: string) => `Máximo alcanzado: ${fmt(peak)} · Rango: ${rank}`,
+    newBest: '¡Nuevo récord!',
+    again: 'Otra partida infinita',
+    winTitle: 'LA BANCA HA SALTADO',
+    winLines: ['Cien mil fichas.', 'La casa no sabe qué hacer con tanta derrota.', '«…Esto no se había visto nunca. No se repetirá.»']
+  },
 
   hub: {
     title: 'El pasillo',
@@ -53,6 +80,41 @@ export const T = {
     hello: '¿Hola?',
     late: '«Llegas tarde.»',
     abducted: ['…', '«Bienvenido a la última feria.»', '«Llegas justo a tiempo para pagar.»']
+  },
+
+  eggs: {
+    examine: (label: string) => `[F] ${label}`,
+    rooms: { mirrors: 'SALA DE LOS ESPEJOS', storage: 'ALMACÉN', archive: 'ARCHIVO DE DEUDAS' } as Record<string, string>,
+    names: {
+      coin: 'Moneda', ouija: 'Tablero', jukebox: 'Gramola', tv: 'Televisor', slot777: 'Tragaperras rota', mannequin: 'Maniquí',
+      doll: 'Muñeca', jars: 'Frascos', mirror: 'Espejo', ledger: 'Libro de deudas', portraits: 'Retratos', emptyFrame: 'Marco vacío',
+      lockedDoor: 'Puerta', exit: 'Salida', phone: 'Teléfono', poster: 'Cartel', tarot: 'Cartas', clock: 'Reloj'
+    } as Record<string, string>,
+    coin: '«Una moneda con la cara de alguien que conoces.» Te la guardas: +100 fichas.',
+    coinDone: 'Solo queda el hueco donde estaba la moneda.',
+    ouija: ['La plancheta se mueve sola: S… A… L… I… R.', 'Debajo, tachado con uñas: S… I… E… M… P… R… E.'],
+    jukebox: 'Suena el organillo del tiovivo, desafinado a propósito. Nadie ha metido ninguna moneda.',
+    tv: ['Entre la nieve, un pasillo. Una figura de espaldas, fumando.', 'Se vuelve. Eres tú. La pantalla se apaga.'],
+    slot777: '7… 7… 7… La palanca cede sola y caen setenta y siete fichas.',
+    slot777Done: 'Los tres sietes te miran. Ya no queda nada.',
+    mannequin: ['No te quita ojo. No se lo quites tú.', 'Cada vez que miras, está en otro sitio.'],
+    doll: ['Muñeca de porcelana. Su sonrisa estaba más cerrada antes.', 'Giró la cabeza. Seguro que fue una corriente.'],
+    jars: ['Frascos con ojos. Uno guiña.', 'Una etiqueta: «Los que miraron de más».'],
+    mirror: ['Tu reflejo llega un segundo tarde.', 'Detrás de ti, el cristal enseña una chistera.'],
+    ledger: (nights: number, mode: 'campaign' | 'endless', tolls: number) =>
+      mode === 'endless' ? `Una página con tu nombre. Cobros de la casa: ${tolls}. Ninguno devuelto.` : `Noches saldadas: ${nights}. Todas con tu letra. Ninguna con tu permiso.`,
+    portraits: ['Todos jugaron. Todos pagaron.', 'Los ojos de los retratos te siguen. Los de uno ya no están.'],
+    emptyFrame: 'Un marco vacío. La placa dice: «TÚ».',
+    lockedDoor: 'DEUDORES. Cerrada. Se abrirá cuando no puedas pagar.',
+    exit: '«No hay salida. Hay cuota.» La puerta ni siquiera tiene picaporte.',
+    exitEndless: 'Aquí no se sale. Solo se acumula.',
+    phone: ['…respiración. Luego: «No es para ti.»', '…alguien cuelga primero. No fuiste tú.', '«Tu turno llega pronto.» Click.'],
+    poster: '«ÚLTIMA VUELTA.» El payaso del cartel no está. Solo queda el globo.',
+    tarot: 'La Torre. La Rueda. El Colgado. Tres cartas, ninguna buena.',
+    clock: 'El reloj marca las 12:00. Lleva así desde la primera noche.',
+    whispers: ['«Siete noches…»', '«No mires atrás.»', '«Cobra. Cobra. Cobra.»', '«Sigues aquí.»', '«Te oigo respirar.»'],
+    ring: 'Suena un teléfono lejano. Nadie lo coge.',
+    knock: 'Tres golpes. Vienen de dentro de la pared.'
   },
 
   mortgage: {

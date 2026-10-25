@@ -90,8 +90,8 @@ export abstract class TableStage extends Stage {
     this.hud.freeze(false);
     this.setBusy(false);
     const ph = session.run.phase;
-    if (ph === 'duel' || ph === 'dawn') {
-      this.say(ph === 'duel' ? '«Se acabó el tiempo. Hora de pagar.»' : '«Amanece. Veamos qué has reunido.»');
+    if (ph === 'duel' || ph === 'dawn' || ph === 'dead' || ph === 'ending') {
+      this.say(ph === 'duel' ? '«Se acabó el tiempo. Hora de pagar.»' : ph === 'dawn' ? '«Amanece. Veamos qué has reunido.»' : ph === 'dead' ? '«La casa gana. Siempre.»' : '«…Imposible.»');
       this.run(async () => { await this.tweens.wait(2600); goPhase(); });
     }
   }

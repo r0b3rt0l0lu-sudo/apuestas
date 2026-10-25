@@ -89,9 +89,11 @@ export class Title3D extends Stage {
     const q = el('div', 'abs txt', quote, this.ui);
     Object.assign(q.style, { right: '60px', top: '60px', fontSize: '34px', color: '#c4b494', textShadow: '2px 2px 0 #000', fontFamily: "'Special Elite', serif" });
     this.menu = el('div', 'hit tmenu', '', this.ui);
-    Object.assign(this.menu.style, { position: 'absolute', left: '72px', top: '440px', display: 'flex', flexDirection: 'column', gap: '14px' });
+    Object.assign(this.menu.style, { position: 'absolute', left: '72px', top: '420px', display: 'flex', flexDirection: 'column', gap: '14px' });
     if (session.hasSave()) btn(this.menu, T.continue, () => this.go(true), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
     btn(this.menu, T.newGame, () => (session.hasSave() ? this.confirmNew() : this.go(false)), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
+    const eb = btn(this.menu, T.endless.button, () => (session.hasSave() ? this.confirmEndless() : this.goEndless()), { cls: 'big', style: { width: '420px', minHeight: '66px' }, sub: session.best() > 0 ? T.endless.best(session.best()) : undefined });
+    void eb;
     btn(this.menu, T.options, () => openOptions(this.ui), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
     const hint = el('div', 'abs txt', T.keysHint, this.ui);
     Object.assign(hint.style, { left: '72px', bottom: '22px', fontSize: '24px', color: '#948068' });
@@ -109,6 +111,18 @@ export class Title3D extends Stage {
       { text: T.yes, onClick: () => { ov.close(); this.go(false); } },
       { text: T.no, onClick: () => ov.close() }
     ], { w: 800, onBack: () => ov.close() });
+  }
+
+  private confirmEndless(): void {
+    const ov = showOverlay(this.ui, T.endless.button, [T.endless.confirm], [
+      { text: T.yes, onClick: () => { ov.close(); this.goEndless(); } },
+      { text: T.no, onClick: () => ov.close() }
+    ], { w: 800, onBack: () => ov.close() });
+  }
+
+  private goEndless(): void {
+    session.startNew(undefined, 'endless');
+    goPhase();
   }
 
   private go(resume: boolean): void {

@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { canPlayAny } from '../src/core/economy';
-import { MORTGAGE_RATE, cursesFor, mortgageOffers, nightDef } from '../src/core/nights';
+import { ENDLESS, MORTGAGE_RATE, cursesFor, mortgageOffers, nightDef, rankFor, tollFor } from '../src/core/nights';
 import { Rng } from '../src/core/rng';
-import { DEFAULT_OPTIONS, clearRun, loadOptions, loadRun, saveRun } from '../src/core/save';
+import { DEFAULT_OPTIONS, clearRun, loadBest, loadOptions, loadRun, saveBest, saveRun } from '../src/core/save';
 import { type RunState, apply, canMortgage, newRun, quotaMet, quotaOf } from '../src/core/state';
 
 const mem = () => {
@@ -153,6 +153,84 @@ describe('hipoteca', () => {
     const s = { ...apply(newRun(1), { type: 'mortgage', amount: 600 }), phase: 'duel' as const };
     const n = apply(apply(s, { type: 'duelResult', won: true }), { type: 'nextNight' });
     expect(n).toMatchObject({ night: 2, balance: 1100, debt: 0 });
+  });
+});
+
+describe('modo infinito', () => {
+  const endless = (over: Partial<RunState> = {}): RunState => ({ ...newRun(1, 'endless'), phase: 'playing', ...over });
+  const bet = (s: RunState, payout = 0, bet = 50): RunState => apply(s, { type: 'resolve', game: 'slots', bet, payout, rng: s.rng });
+
+  it('empieza con fichas fijas, sin cuota ni noches y sin intro', () => {
+    const s = newRun(5, 'endless');
+    expect(s).toMatchObject({ mode: 'endless', balance: ENDLESS.start, peak: ENDLESS.start, actionsLeft: ENDLESS.actions, phase: 'hub' });
+    expect(quotaOf(s)).toBe(0);
+    expect(s.flags).toMatchObject({ casino: true, tutorial: true });
+  });
+  it('no hay hipoteca ni dormir', () => {
+    const s = newRun(5, 'endless');
+    expect(canMortgage(s)).toBe(false);
+    expect(apply(s, { type: 'mortgage', amount: 200 })).toBe(s);
+    expect(apply(s, { type: 'sleep' }).phase).toBe('hub');
+  });
+  it('anota jugadas y el saldo máximo', () => {
+    let s = bet(endless(), 500); // +450
+    expect(s).toMatchObject({ plays: 1, balance: 1450, peak: 1450 });
+    s = bet(s, 0, 250);
+    expect(s).toMatchObject({ plays: 2, balance: 1200, peak: 1450 });
+  });
+  it('la casa cobra cada 10 jugadas, un porcentaje creciente', () => {
+    let s = endless();
+    for (let i = 0; i < 9; i++) s = bet(s, 50); // se devuelve la apuesta: saldo estable
+    expect(s).toMatchObject({ plays: 9, tolls: 0, balance: 1000 });
+    s = bet(s, 50);
+    expect(s).toMatchObject({ plays: 10, tolls: 1, lastToll: 100, balance: 900 });
+    for (let i = 0; i < 10; i++) s = bet(s, 50);
+    expect(s.tolls).toBe(2);
+    expect(s.lastToll).toBe(tollFor(1, 900));
+    expect(tollFor(1, 900)).toBeGreaterThan(tollFor(0, 900) * 1.1);
+  });
+  it('el cobro tiene mínimo, máximo y nunca supera el saldo', () => {
+    expect(tollFor(0, 100)).toBe(50);
+    expect(tollFor(0, 30)).toBe(30);
+    expect(tollFor(50, 10_000)).toBe(3500);
+  });
+  it('sin fichas para la apuesta mínima se pierde', () => {
+    const s = bet(endless({ balance: 80 }), 0, 50);
+    expect(s.balance).toBe(30);
+    expect(s.phase).toBe('dead');
+  });
+  it('romper la banca es ganar', () => {
+    const s = bet(endless({ balance: 90_000 }), 50 * 50, 50); // +2450: no llega
+    expect(s.phase).toBe('playing');
+    const w = bet(endless({ balance: 99_900 }), 50 * 50, 50);
+    expect(w.peak).toBeGreaterThanOrEqual(ENDLESS.bankBreak);
+    expect(w.phase).toBe('ending');
+  });
+  it('rangos por saldo máximo', () => {
+    expect([0, 3000, 12_000, 50_000, 100_000].map(rankFor)).toEqual(['novato', 'jugador', 'tiburon', 'leyenda', 'banca']);
+  });
+  it('el récord solo sube', () => {
+    const m = mem();
+    expect(loadBest(m)).toBe(0);
+    expect(saveBest(5000, m)).toBe(5000);
+    expect(saveBest(3000, m)).toBe(5000);
+    expect(loadBest(m)).toBe(5000);
+  });
+  it('un guardado antiguo se carga como campaña', () => {
+    const m = mem();
+    const old: Partial<RunState> = { ...newRun(3) };
+    delete old.mode; delete old.peak; delete old.plays;
+    m.setItem('ultima-feria.run', JSON.stringify(old));
+    expect(loadRun(m)).toMatchObject({ mode: 'campaign', plays: 0 });
+  });
+});
+
+describe('hallazgos', () => {
+  it('dan fichas una sola vez por partida', () => {
+    const a = apply(newRun(1), { type: 'find', key: 'egg-coin', chips: 100 });
+    expect(a.balance).toBe(600);
+    expect(a.flags['egg-coin']).toBe(true);
+    expect(apply(a, { type: 'find', key: 'egg-coin', chips: 100 })).toBe(a);
   });
 });
 

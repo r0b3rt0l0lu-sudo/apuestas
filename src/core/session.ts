@@ -1,4 +1,4 @@
-import { type Options, clearRun, loadOptions, loadRun, saveOptions, saveRun } from './save';
+import { type Options, clearRun, loadBest, loadOptions, loadRun, saveBest, saveOptions, saveRun } from './save';
 import { type Action, type RunState, apply, newRun, quotaOf } from './state';
 import { freshSeed } from './rng';
 
@@ -9,6 +9,11 @@ class Session {
   run: RunState = newRun(1);
   options: Options = loadOptions();
   private listeners = new Set<Listener>();
+
+  /** Récord del modo infinito. */
+  best(): number {
+    return loadBest();
+  }
 
   hasSave(): boolean {
     return loadRun() !== null;
@@ -22,9 +27,9 @@ class Session {
     return true;
   }
 
-  startNew(seed: number = freshSeed()): void {
+  startNew(seed: number = freshSeed(), mode: 'campaign' | 'endless' = 'campaign'): void {
     clearRun();
-    this.run = newRun(seed);
+    this.run = newRun(seed, mode);
     saveRun(this.run);
     this.emit();
   }
@@ -32,6 +37,7 @@ class Session {
   /** Aplica una acción, guarda tras resolverla y avisa a la interfaz. */
   dispatch(a: Action): RunState {
     this.run = apply(this.run, a);
+    if (this.run.mode === 'endless' && (this.run.phase === 'dead' || this.run.phase === 'ending')) saveBest(this.run.peak);
     if (this.run.phase === 'dead' || this.run.phase === 'ending') clearRun();
     else saveRun(this.run);
     this.emit();

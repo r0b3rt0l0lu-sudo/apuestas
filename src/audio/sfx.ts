@@ -76,6 +76,10 @@ class Sfx {
     this.noise(0.9, 0.35 * v, 2600, 0, 0.8, 'highpass');
     this.tone(55, 0.7, 'sine', 0.4 * v, 0, -20);
   }
+  /** Una nota suelta de organillo (triángulo + cuadrada, algo desafinada). */
+  note(f: number): void { this.tone(f, 0.28, 'triangle', 0.1 * this.vSfx); this.tone(f * 1.007, 0.28, 'square', 0.025 * this.vSfx); }
+  /** Timbre de teléfono antiguo. */
+  ring(): void { this.tone(1400, 0.09, 'square', 0.05 * this.vSfx); this.tone(1100, 0.09, 'square', 0.05 * this.vSfx, 0.1); }
   /** Golpe seco (agarrón, caída). */
   thud(): void { this.tone(70, 0.35, 'sine', 0.35 * this.vSfx, 0, -35); this.noise(0.25, 0.18 * this.vSfx, 500); }
   lighter(): void { this.tone(2600, 0.03, 'square', 0.06 * this.vSfx); this.noise(0.3, 0.08 * this.vSfx, 3200, 0.06, 1, 'highpass'); }
