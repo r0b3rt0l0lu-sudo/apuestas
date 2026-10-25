@@ -7,6 +7,7 @@ import { Button, FocusGroup } from '../ui/Button';
 import { Candle } from '../ui/Candle';
 import { CobradorSprite } from '../ui/CobradorSprite';
 import { label } from '../ui/text';
+import { FX } from '../fx/particles';
 import { fadeTo, goPhase } from './common';
 
 export class DeathScene extends Phaser.Scene {
@@ -17,6 +18,7 @@ export class DeathScene extends Phaser.Scene {
     if (r.phase !== 'dead') { goPhase(this); return; }
     sfx.ambience('none');
     this.add.rectangle(W / 2, H / 2, W, H, hex('#0A0608'));
+    const fx = new FX(this, 2);
     const candle = new Candle(this, 140, 650, 6);
     const cb = new CobradorSprite(this, W / 2, 400, 5).setMood('cobra').setScale(0.45).setAlpha(0.9);
     const black = this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 1).setDepth(100).setAlpha(0);
@@ -33,7 +35,7 @@ export class DeathScene extends Phaser.Scene {
       sfx.whisper();
       this.tweens.addCounter({ from: 0.45, to: 1.7, duration: 3200, onUpdate: (t) => cb.setScale(Math.round((t.getValue() ?? 1) * 20) / 20) });
     });
-    this.time.delayedCall(1200, () => this.tweens.add({ targets: candle, alpha: 0.2, duration: 2200, onComplete: () => candle.setLit(false) }));
+    this.time.delayedCall(1200, () => this.tweens.add({ targets: candle, alpha: 0.2, duration: 2200, onComplete: () => { candle.setLit(false); fx.smoke(140, 620, 10, 90); } }));
     this.time.delayedCall(3600, () => { black.setAlpha(1); candle.setVisible(false); cb.setVisible(false); });
     this.time.delayedCall(4200, () => this.tweens.add({ targets: title, alpha: 1, duration: 400 }));
     this.time.delayedCall(5000, () => this.tweens.add({ targets: sub, alpha: 1, duration: 500 }));

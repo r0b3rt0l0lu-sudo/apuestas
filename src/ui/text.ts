@@ -22,7 +22,7 @@ export function label(scene: Phaser.Scene, x: number, y: number, s: string, o: T
     lineSpacing: 2
   });
   const [ox, oy] = o.origin ?? (o.align === 'center' ? [0.5, 0] : [0, 0]);
-  t.setOrigin(ox, oy).setResolution(1);
+  t.setOrigin(ox, oy).setResolution(1).setShadow(2, 2, '#000000', 0, false, true);
   if (o.depth !== undefined) t.setDepth(o.depth);
   return t;
 }

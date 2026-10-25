@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { C, FONT_UI, hex } from '../config';
+import { C, FONT_UI } from '../config';
 import { sfx } from '../audio/sfx';
 
 export interface ButtonOpts {
@@ -13,9 +13,12 @@ export interface ButtonOpts {
 }
 
 export class Button extends Phaser.GameObjects.Container {
-  private bg: Phaser.GameObjects.Rectangle;
+  private bg: Phaser.GameObjects.NineSlice;
+  private hit: Phaser.GameObjects.Rectangle;
   private txt: Phaser.GameObjects.Text;
   private subTxt: Phaser.GameObjects.Text | null = null;
+  private glint: Phaser.GameObjects.Image;
+  private inner: Phaser.GameObjects.Container;
   enabled = true;
   focused = false;
   toggled = false;
@@ -26,30 +29,39 @@ export class Button extends Phaser.GameObjects.Container {
     super(scene, x, y);
     this.w = w;
     this.h = h;
-    this.bg = scene.add.rectangle(0, 0, w, h, hex(C.panel)).setStrokeStyle(4, hex(C.brass));
+    this.inner = scene.add.container(0, 0);
+    this.bg = scene.add.nineslice(0, 0, 'ui-btn', undefined, Math.round(w / 2), Math.round(h / 2), 8, 8, 8, 8).setScale(2);
+    this.hit = scene.add.rectangle(0, 0, w, h, 0x000000, 0);
     const shift = opts.icon ? 26 : 0;
     this.txt = scene.add.text(shift, opts.sub ? -h * 0.18 : 0, text, {
-      fontFamily: FONT_UI, fontSize: `${opts.size ?? 32}px`, color: C.text, align: 'center', wordWrap: { width: w - 16 - shift * 2 }
-    }).setOrigin(0.5).setResolution(1);
-    this.add([this.bg, this.txt]);
-    if (opts.icon) this.add(scene.add.image(-w / 2 + 38, 0, opts.icon).setScale(3));
+      fontFamily: FONT_UI, fontSize: `${opts.size ?? 32}px`, color: C.text, align: 'center', wordWrap: { width: w - 40 - shift * 2 }
+    }).setOrigin(0.5).setResolution(1).setShadow(2, 2, '#000000', 0, false, true);
+    this.glint = scene.add.image(-w / 2 + 14, -h / 2 + 14, 'spark').setScale(2).setVisible(false);
+    this.inner.add([this.bg, this.txt, this.glint]);
     if (opts.sub) {
-      this.subTxt = scene.add.text(0, h * 0.24, opts.sub, { fontFamily: FONT_UI, fontSize: '24px', color: C.textDim, align: 'center', wordWrap: { width: w - 16 } })
-        .setOrigin(0.5).setResolution(1);
-      this.add(this.subTxt);
+      this.subTxt = scene.add.text(0, h * 0.24, opts.sub, { fontFamily: FONT_UI, fontSize: '24px', color: C.textDim, align: 'center', wordWrap: { width: w - 40 } })
+        .setOrigin(0.5).setResolution(1).setShadow(2, 2, '#000000', 0, false, true);
+      this.inner.add(this.subTxt);
     }
+    if (opts.icon) this.inner.add(scene.add.image(-w / 2 + 40, 0, opts.icon).setScale(3));
+    this.add([this.inner, this.hit]);
     this.setSize(w, h);
-    this.bg.setInteractive({ useHandCursor: true });
-    this.bg.on('pointerover', () => { if (this.enabled) this.emit('hover'); });
-    this.bg.on('pointerup', () => this.activate());
+    this.hit.setInteractive({ useHandCursor: true });
+    this.hit.on('pointerover', () => { if (this.enabled) this.emit('hover'); });
+    this.hit.on('pointerdown', () => { if (this.enabled) this.inner.setY(4); });
+    this.hit.on('pointerup', () => { this.inner.setY(0); this.activate(); });
+    this.hit.on('pointerout', () => this.inner.setY(0));
     this.toggled = !!opts.toggled;
     scene.add.existing(this);
+    scene.tweens.add({ targets: this.glint, alpha: { from: 1, to: 0.25 }, duration: 380, yoyo: true, repeat: -1 });
     this.refresh();
   }
 
   activate(): void {
     if (!this.enabled) return;
     sfx.click();
+    this.inner.setY(4);
+    this.scene.time.delayedCall(70, () => this.inner.setY(0));
     this.onClick();
   }
 
@@ -58,21 +70,30 @@ export class Button extends Phaser.GameObjects.Container {
 
   setEnabled(v: boolean): this {
     this.enabled = v;
-    if (this.bg.input) this.bg.input.enabled = v;
+    if (this.hit.input) this.hit.input.enabled = v;
     this.refresh();
     return this;
   }
 
   setToggled(v: boolean): this { this.toggled = v; this.refresh(); return this; }
-  setFocused(v: boolean): this { this.focused = v; this.refresh(); return this; }
+  setFocused(v: boolean): this {
+    const was = this.focused;
+    this.focused = v;
+    this.refresh();
+    if (v && !was && this.enabled) {
+      this.inner.setY(-2);
+      this.scene.tweens.add({ targets: this.inner, y: 0, duration: 120, ease: 'Quad.easeOut' });
+    }
+    return this;
+  }
 
   private refresh(): void {
     const on = this.enabled;
-    this.bg.setFillStyle(hex(this.toggled ? C.wood : C.panel));
-    this.bg.setStrokeStyle(this.focused ? 6 : 4, hex(this.focused ? C.lamp : this.toggled ? C.gold : C.brass));
+    this.bg.setTexture(!on ? 'ui-btn-d' : this.focused ? 'ui-btn-f' : this.toggled ? 'ui-btn-t' : 'ui-btn');
+    this.glint.setVisible(this.focused && on);
     this.txt.setColor(on ? (this.toggled || this.focused ? C.textBright : C.text) : C.textDim);
     this.subTxt?.setColor(C.textDim);
-    this.setAlpha(on ? 1 : 0.55);
+    this.setAlpha(on ? 1 : 0.7);
   }
 }
 

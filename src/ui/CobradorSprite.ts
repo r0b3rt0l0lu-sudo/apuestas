@@ -35,7 +35,7 @@ export class CobradorSprite extends Phaser.GameObjects.Container {
     mk('glint', 'cb-glint').setVisible(false);
     this.glitchImg = scene.add.image(0, 0, 'cb-glitch-acecho').setScale(px).setVisible(false);
     this.add(this.glitchImg);
-    this.setSize(48 * px, 48 * px);
+    this.setSize(64 * px, 64 * px);
     scene.add.existing(this);
     scene.time.addEvent({ delay: 150, loop: true, callback: () => this.step() });
     this.step();
@@ -47,6 +47,20 @@ export class CobradorSprite extends Phaser.GameObjects.Container {
     this.layers.brow?.setTexture(`cb-brow-${m}`);
     this.layers.mouth?.setTexture(`cb-mouth-${m}`);
     return this;
+  }
+
+  /** Se sacude de risa (o de rabia). */
+  laugh(): void {
+    if (session.options.reduceFlash) return;
+    const x0 = this.x;
+    this.scene.tweens.add({ targets: this, x: { from: x0 - 4, to: x0 + 4 }, duration: 55, yoyo: true, repeat: 7, onComplete: () => this.setX(x0) });
+  }
+
+  /** Retrocede al recibir un golpe. */
+  flinch(dir = 1): void {
+    const x0 = this.x, y0 = this.y;
+    this.glitch();
+    this.scene.tweens.add({ targets: this, x: x0 + 20 * dir, y: y0 - 8, duration: 90, yoyo: true, ease: 'Quad.easeOut', onComplete: () => this.setPosition(x0, y0) });
   }
 
   /** Fuerza el fotograma glitch ahora. */

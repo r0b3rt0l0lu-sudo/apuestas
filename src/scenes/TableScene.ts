@@ -5,7 +5,6 @@ import { type Game, TABLES } from '../core/economy';
 import { session } from '../core/session';
 import { quotaOf } from '../core/state';
 import { T, fmt } from '../i18n/es';
-import { fairBackdrop } from '../ui/backdrop';
 import { Button, FocusGroup } from '../ui/Button';
 import { CobradorSprite } from '../ui/CobradorSprite';
 import { Hud } from '../ui/Hud';
@@ -30,6 +29,8 @@ export abstract class TableScene extends Phaser.Scene {
   }
 
   protected abstract build(): void;
+  /** Cada mesa pinta su propio fondo animado. */
+  protected abstract backdrop(): void;
   /** Se llama cuando cambia la apuesta o el saldo, para reactivar botones. */
   protected onStateChange(): void { /* opcional */ }
 
@@ -39,7 +40,7 @@ export abstract class TableScene extends Phaser.Scene {
     if (session.run.phase === 'hub') session.dispatch({ type: 'enterTable' });
     if (session.run.phase !== 'playing') { goPhase(this); return; }
     fadeIn(this);
-    fairBackdrop(this, 0x2e2418);
+    this.backdrop();
     this.hud = new Hud(this);
     sfx.ambience(this.ambience);
     this.group = new FocusGroup(this);

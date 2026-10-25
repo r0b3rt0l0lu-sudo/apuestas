@@ -453,3 +453,10 @@ Desviaciones y decisiones tomadas al implementar; revisar si alguna no encaja:
 - **`RunState` ampliado** con `rng` (estado del RNG, para reproducir la partida al recargar) y `forgiven` (duelo ganado: cuota perdonada esa noche).
 - El duelo no se guarda a mitad: al recargar en fase `duel` empieza un duelo nuevo con la misma semilla.
 - `?debug` en la URL expone `window.__game` y `window.__session` para pruebas de humo.
+- **Repaso visual (pixel art de mayor calidad y más animación):** a petición del usuario se rehizo el arte, lo que prevalece sobre las medidas del §7:
+  - El Cobrador pasa a **64×64** (antes 48×48); los símbolos de la tragaperras a **24×24** (×4 en los rodillos); el trabuco a **48×24**. El caballito sigue en 48×40.
+  - Sombreado con rampas de 5 tonos derivadas de los tokens (sombras hacia violeta, luces hacia crema), bisel por polígono, tramado ordenado y contorno selectivo en vez de un negro plano. Los tokens base no cambian.
+  - Fondos de **320×200 mostrados a ×4** por escena (`src/art/scenery.ts`): feria nocturna, caseta con la tragaperras, sala de fieltro, carpa del tiovivo, sala de Deudores y amanecer. Capas animadas: estrellas, bombillas, noria (48 fotogramas), niebla, murciélagos y pájaros, llamas, público, foco con polvo.
+  - Marcos de interfaz de 9 trozos (`ui-btn*`, `ui-panel`, `ui-dialog`), HUD con saldo que cuenta, cuota segmentada y velas de acciones.
+  - Partículas de píxeles (`src/fx/particles.ts`): monedas, chispas, humo, polvo y confeti. Transición entre escenas por bloques de píxeles (`src/fx/wipe.ts`); con «reducir destellos» se usa un fundido.
+  - `preview.html` (vite dev) muestra sprites y fondos a escala entera para iterar el arte: `/preview.html?set=fair|booth|felt|arena|duel|dawn|cb|horse|props`.

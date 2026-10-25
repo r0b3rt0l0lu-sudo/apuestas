@@ -5,7 +5,7 @@ import { GAMES, type Game, TABLES, canPlay, minBet } from '../core/economy';
 import { session } from '../core/session';
 import { quotaMet } from '../core/state';
 import { T } from '../i18n/es';
-import { fairBackdrop } from '../ui/backdrop';
+import { fairBackdrop } from '../ui/scenic';
 import { Button, FocusGroup } from '../ui/Button';
 import { CobradorSprite } from '../ui/CobradorSprite';
 import { Hud } from '../ui/Hud';
@@ -33,13 +33,20 @@ export class HubScene extends Phaser.Scene {
     sfx.ambience('hub');
     this.add.text(W / 2, 100, T.hub.title, { fontFamily: 'Special Elite', fontSize: '40px', color: C.textBright }).setOrigin(0.5, 0).setResolution(1);
 
-    this.cb = new CobradorSprite(this, 230, 400, 5);
+    this.cb = new CobradorSprite(this, 240, 410, 5).setDepth(8);
+    this.cb.setAlpha(0);
+    this.tweens.add({ targets: this.cb, alpha: 1, x: { from: 200, to: 240 }, duration: 700, ease: 'Quad.easeOut' });
     const d = dialogue(this, 40, 640, 1200, 140);
     this.say = (s) => d.tw.say(s, true);
 
     this.group = new FocusGroup(this);
     this.group.onBack = () => openOptions(this);
     this.buildButtons();
+    this.group.buttons.forEach((b, i) => {
+      const x = b.x;
+      b.setX(x + 420).setAlpha(0);
+      this.tweens.add({ targets: b, x, alpha: 1, duration: 420, delay: 120 + i * 110, ease: 'Back.easeOut' });
+    });
 
     const advance = () => { if (!d.tw.skip()) this.waiting?.(); };
     this.input.on('pointerdown', advance);
@@ -57,6 +64,7 @@ export class HubScene extends Phaser.Scene {
         size: 40, sub: ok ? T.hub.cost(TABLES[g].cost, minBet(g)) : T.hub.unavailable
       });
       b.setEnabled(ok && !this.locked);
+      b.on('hover', () => this.lean());
       this.group.add(b, String(i + 1));
     });
     if (quotaMet(r)) {
@@ -64,6 +72,11 @@ export class HubScene extends Phaser.Scene {
     }
     this.group.add(new Button(this, 150, 600, 220, 56, T.options, () => openOptions(this), { size: 28 }).setEnabled(true));
     this.group.focusFirst();
+  }
+
+  /** El Cobrador se inclina hacia el botón elegido. */
+  private lean(): void {
+    this.tweens.add({ targets: this.cb, x: 252, duration: 140, yoyo: true, ease: 'Quad.easeOut' });
   }
 
   private lock(v: boolean): void {

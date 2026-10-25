@@ -2,7 +2,8 @@ import type Phaser from 'phaser';
 import { session, sceneForPhase } from '../core/session';
 import { phraseCycle } from '../core/phrases';
 import { Rng } from '../core/rng';
-import { C, W, hex } from '../config';
+import { C, W } from '../config';
+import { wipe } from '../fx/wipe';
 import { Typewriter } from '../ui/Typewriter';
 import { label } from '../ui/text';
 
@@ -19,13 +20,13 @@ export function phrase(list: readonly string[]): string {
 }
 
 /** Cambio de escena con fundido de 0,5 s. */
-export function fadeTo(scene: Phaser.Scene, key: string, ms = 500): void {
-  scene.cameras.main.fadeOut(ms, 0, 0, 0);
-  scene.cameras.main.once('camerafadeoutcomplete', () => scene.scene.start(key));
+export function fadeTo(scene: Phaser.Scene, key: string, ms = 560): void {
+  void wipe(scene, 'out', ms).then(() => scene.scene.start(key));
 }
 
-export function fadeIn(scene: Phaser.Scene, ms = 500): void {
-  scene.cameras.main.fadeIn(ms, 0, 0, 0);
+/** Descubre la escena con la transición por bloques. */
+export function fadeIn(scene: Phaser.Scene, ms = 560): void {
+  void wipe(scene, 'in', ms);
 }
 
 export function goPhase(scene: Phaser.Scene): void {
@@ -48,7 +49,7 @@ export function leaveTable(scene: Phaser.Scene): void {
 
 /** Cuadro de diálogo del Cobrador con máquina de escribir. */
 export function dialogue(scene: Phaser.Scene, x: number, y: number, w: number, h: number): { text: Phaser.GameObjects.Text; tw: Typewriter } {
-  scene.add.rectangle(x + w / 2, y + h / 2, w, h, hex(C.panel)).setStrokeStyle(4, hex(C.brass)).setDepth(50);
+  scene.add.nineslice(x + w / 2, y + h / 2, 'ui-dialog', undefined, Math.round(w / 2), Math.round(h / 2), 8, 8, 8, 8).setScale(2).setDepth(50);
   const text = label(scene, x + 24, y + 14, '', { size: 32, color: C.textBright, wrap: w - 48, depth: 51 });
   return { text, tw: new Typewriter(scene, text) };
 }

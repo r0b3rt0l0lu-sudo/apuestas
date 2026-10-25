@@ -1,12 +1,11 @@
 import type Phaser from 'phaser';
-import { C } from '../config';
 import { HORSES, type Skin } from '../games/race';
-import { SYMBOLS } from '../games/slots';
 import * as cb from './cobrador';
-import { HH, HW, SKIN_LOOKS, drawHorse, drawPole } from './horse';
-import type { Painter } from './painter';
-import { Painter as P } from './painter';
+import { SKIN_LOOKS, drawHorse, drawPole } from './horse';
+import { Painter as P, type Painter } from './painter';
 import * as props from './props';
+import * as sc from './scenery';
+import * as ui from './ui';
 
 function add(scene: Phaser.Scene, key: string, p: Painter): void {
   if (scene.textures.exists(key)) scene.textures.remove(key);
@@ -14,10 +13,12 @@ function add(scene: Phaser.Scene, key: string, p: Painter): void {
   tex?.setFilter(0); // NEAREST
 }
 
+export const WHEEL_FRAMES = 48;
+
 /** Genera todas las texturas del juego (todo pixel art dibujado por código). */
 export function buildTextures(scene: Phaser.Scene): void {
   // El Cobrador por capas
-  add(scene, 'cb-base', cb.outlined(cb.drawBase()));
+  add(scene, 'cb-base', cb.drawBase());
   for (const m of cb.MOODS) {
     add(scene, `cb-eye-${m}`, cb.drawEye(m));
     add(scene, `cb-brow-${m}`, cb.drawBrow(m));
@@ -31,7 +32,7 @@ export function buildTextures(scene: Phaser.Scene): void {
     add(scene, `cb-halo-${f}`, cb.drawHalo(f, false));
     add(scene, `cb-halor-${f}`, cb.drawHalo(f, true));
     add(scene, `cb-moth-${f}`, cb.drawMoth(f));
-    add(scene, `cb-fingers-${f}`, cb.outlined(cb.drawFingers(f)));
+    add(scene, `cb-fingers-${f}`, cb.drawFingers(f));
   }
   add(scene, 'cb-socket', cb.drawSocketDot());
   add(scene, 'cb-glint', cb.drawGlint());
@@ -49,7 +50,7 @@ export function buildTextures(scene: Phaser.Scene): void {
     for (const f of [0, 1] as const) add(scene, `skin-${skin}-${f}`, drawHorse({ skin, body: l.body, mane: l.mane, num: 1 }, f));
   });
 
-  // Símbolos de la tragaperras
+  // Símbolos (24×24)
   for (const look of ['abierto', 'izq', 'der', 'cerrado'] as const) add(scene, `sym-ojo-${look}`, props.drawEyeSymbol(look));
   add(scene, 'sym-diente', props.drawTooth());
   add(scene, 'sym-polilla', props.drawMoth());
@@ -59,24 +60,58 @@ export function buildTextures(scene: Phaser.Scene): void {
   add(scene, 'sym-siete-1', props.drawSeven(1));
 
   // Duelo
-  add(scene, 'candle-lit-0', props.drawCandle(true, 0));
-  add(scene, 'candle-lit-1', props.drawCandle(true, 1));
-  add(scene, 'candle-out-0', props.drawCandle(false, 0));
-  add(scene, 'candle-out-1', props.drawCandle(false, 1));
+  for (const f of [0, 1] as const) { add(scene, `candle-lit-${f}`, props.drawCandle(true, f)); add(scene, `candle-out-${f}`, props.drawCandle(false, f)); }
   for (const it of ['monoculo', 'moneda', 'vela', 'reloj', 'polvora'] as const) add(scene, `item-${it}`, props.drawItem(it));
   const gun = props.drawBlunderbuss();
   add(scene, 'trabuco', gun);
   add(scene, 'trabuco-up', rotate(gun, 1));
   add(scene, 'trabuco-down', rotate(gun, -1));
 
-  // Fichas y bola
-  add(scene, 'chip', new P(8, 8).ellipse(3, 3, 3, 3, C.gold).ellipse(3, 3, 1, 1, C.brass).outline(C.bg));
-  add(scene, 'ball', new P(4, 4).ellipse(1, 1, 1, 1, C.textBright).outline(C.bg));
-  void HW; void HH; void SYMBOLS;
+  // Interfaz y efectos
+  (['btn', 'btn-f', 'btn-t', 'btn-d', 'panel', 'dialog'] as const).forEach((k) => add(scene, `ui-${k}`, ui.drawFrame(k)));
+  add(scene, 'ui-gauge', ui.drawGauge());
+  add(scene, 'ui-chip', ui.drawChip());
+  add(scene, 'ui-tick-on', ui.drawTick(true));
+  add(scene, 'ui-tick-off', ui.drawTick(false));
+  add(scene, 'px', ui.px2());
+  add(scene, 'spark', ui.drawSpark());
+  for (let f = 0; f < 4; f++) add(scene, `coinfx-${f}`, ui.drawCoinSpin(f));
+  for (const s of [0, 1, 2] as const) add(scene, `smoke-${s}`, ui.drawSmoke(s));
+  for (let f = 0; f < 3; f++) add(scene, `muzzle-${f}`, ui.drawMuzzle(f));
+  add(scene, 'bat-0', ui.drawBat(0));
+  add(scene, 'bat-1', ui.drawBat(1));
+  add(scene, 'ball', new P(5, 5).shadedEllipse(2, 2, 2, 2, { d2: '#6a6070', d1: '#9c9278', b: '#d9cfb0', l1: '#f4ecd0', l2: '#fff' }).outlineSel('#0d0a0e', 0.8));
 }
 
-export const symbolKey = (s: (typeof SYMBOLS)[number], frame = 0): string =>
-  s === 'ojo' ? 'sym-ojo-abierto' : s === 'siete' ? `sym-siete-${frame % 2}` : `sym-${s}`;
+/** Fondos y fotogramas de escena (más pesados: se generan al arrancar el juego). */
+export function buildScenery(scene: Phaser.Scene): void {
+  const fair = sc.drawFairNight();
+  add(scene, 'bg-fair', fair.bg);
+  fair.stars.forEach((s, i) => add(scene, `fair-stars-${i}`, s));
+  fair.bulbs.forEach((s, i) => add(scene, `fair-bulbs-${i}`, s));
+  add(scene, 'fog', fair.fog);
+  for (let k = 0; k < WHEEL_FRAMES; k++) add(scene, `wheel-${k}`, sc.drawWheelFrame(k, WHEEL_FRAMES));
+  const booth = sc.drawBooth();
+  add(scene, 'bg-booth', booth.bg);
+  add(scene, 'booth-glow', booth.glow);
+  const cab = sc.drawCabinet();
+  add(scene, 'cab-body', cab.body);
+  cab.bulbs.forEach((b, i) => add(scene, `cab-bulbs-${i}`, b));
+  cab.lever.forEach((l, i) => add(scene, `cab-lever-${i}`, l));
+  const felt = sc.drawFeltRoom();
+  add(scene, 'bg-felt', felt.bg);
+  felt.flames.forEach((f, i) => add(scene, `felt-flames-${i}`, f));
+  const arena = sc.drawArena();
+  add(scene, 'bg-arena', arena.bg);
+  arena.bulbs.forEach((b, i) => add(scene, `arena-bulbs-${i}`, b));
+  arena.crowd.forEach((b, i) => add(scene, `arena-crowd-${i}`, b));
+  const duel = sc.drawDuelRoom();
+  add(scene, 'bg-duel', duel.bg);
+  add(scene, 'duel-beam', duel.beam);
+  const dawn = sc.drawDawnSky();
+  add(scene, 'bg-dawn', dawn.bg);
+  add(scene, 'dawn-sun', dawn.sun);
+}
 
 /** Giro exacto de 90° (sin suavizado) para apuntar el trabuco arriba o abajo. */
 function rotate(src: Painter, dir: 1 | -1): Painter {
@@ -86,3 +121,6 @@ function rotate(src: Painter, dir: 1 | -1): Painter {
   p.ctx.drawImage(src.canvas, 0, 0);
   return p;
 }
+
+export const symbolKey = (s: 'ojo' | 'diente' | 'polilla' | 'llave' | 'calavera' | 'siete', frame = 0): string =>
+  s === 'ojo' ? 'sym-ojo-abierto' : s === 'siete' ? `sym-siete-${frame % 2}` : `sym-${s}`;

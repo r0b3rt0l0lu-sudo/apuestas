@@ -14,6 +14,8 @@ import { Candle } from '../ui/Candle';
 import { CobradorSprite } from '../ui/CobradorSprite';
 import { label } from '../ui/text';
 import { Typewriter } from '../ui/Typewriter';
+import { FX } from '../fx/particles';
+import { duelBackdrop } from '../ui/scenic';
 import { fadeIn, goPhase } from './common';
 
 const wait = (s: Phaser.Scene, ms: number) => new Promise<void>((res) => { s.time.delayedCall(ms, () => res()); });
@@ -33,6 +35,8 @@ export class DuelScene extends Phaser.Scene {
   private ui: Phaser.GameObjects.GameObject[] = [];
   private bossIcons: Phaser.GameObjects.Image[] = [];
   private pow!: Phaser.GameObjects.Text;
+  private fx!: FX;
+  private shells: Phaser.GameObjects.Rectangle[] = [];
 
   constructor() { super('Duel'); }
 
@@ -45,15 +49,18 @@ export class DuelScene extends Phaser.Scene {
     this.d = newDuel(this.rng, cursesFor(r.night));
     this.candlesP = []; this.candlesB = []; this.ui = []; this.bossIcons = [];
 
-    this.add.rectangle(W / 2, 400, W, 800, hex('#0A0608')).setDepth(-10);
-    this.add.ellipse(W / 2, 300, 900, 600, hex(C.blood), 0.18).setDepth(-9);
-    label(this, W / 2, 20, T.duel.title, { title: true, size: 40, align: 'center', color: C.textBright, depth: 5 });
-    this.cb = new CobradorSprite(this, W / 2, 270, 5);
-    this.gun = this.add.image(W / 2, 560, 'trabuco-up').setScale(6).setDepth(10);
+    duelBackdrop(this);
+    this.fx = new FX(this, 2);
+    this.add.nineslice(W / 2, 40, 'ui-panel', undefined, 190, 22, 8, 8, 8, 8).setScale(2).setDepth(4);
+    label(this, W / 2, 14, T.duel.title, { title: true, size: 32, align: 'center', color: C.textBright, depth: 5 });
+    this.cb = new CobradorSprite(this, W / 2, 286, 5);
+    this.cb.setDepth(3);
+    this.tweens.add({ targets: this.cb, y: { from: -40 + 286, to: 286 }, duration: 800, ease: 'Bounce.easeOut' });
+    this.gun = this.add.image(W / 2, 560, 'trabuco-up').setScale(4).setDepth(10);
     this.info = label(this, W / 2, 78, '', { size: 32, color: C.lamp, align: 'center', depth: 5 });
-    this.msg = label(this, W / 2, 420, '', { size: 32, color: C.textBright, align: 'center', wrap: 1000, depth: 5 });
+    this.msg = label(this, W / 2, 436, '', { size: 32, color: C.textBright, align: 'center', wrap: 1000, depth: 5 });
     this.tw = new Typewriter(this, this.msg, 50);
-    this.known = label(this, W / 2, 458, '', { size: 28, color: C.lamp, align: 'center', depth: 5 });
+    this.known = label(this, W / 2, 474, '', { size: 28, color: C.lamp, align: 'center', depth: 5 });
     this.pow = label(this, 40, 480, '', { size: 24, color: C.dangerText, depth: 5 });
 
     label(this, 60, 140, 'COBRADOR', { size: 28, color: C.textDim, depth: 5 });
@@ -65,8 +72,9 @@ export class DuelScene extends Phaser.Scene {
   }
 
   private refreshCandles(): void {
-    this.candlesB.forEach((c, i) => c.setLit(i < this.d.hp.boss));
-    this.candlesP.forEach((c, i) => c.setLit(i < this.d.hp.player));
+    const snuff = (c: Candle, lit: boolean) => { if (c.lit && !lit) this.fx.smoke(c.x, c.y - 24, 4, 70); c.setLit(lit); };
+    this.candlesB.forEach((c, i) => snuff(c, i < this.d.hp.boss));
+    this.candlesP.forEach((c, i) => snuff(c, i < this.d.hp.player));
     this.bossIcons.forEach((i) => i.destroy());
     this.bossIcons = this.d.items.boss.map((it, i) => this.add.image(1060 + (i % 3) * 56, 190 + Math.floor(i / 3) * 56, `item-${it}`).setScale(3).setDepth(5));
     this.pow.setText([this.d.powder.player ? 'Pólvora lista' : '', this.d.powder.boss ? 'El Cobrador carga pólvora' : '', this.d.skip.player ? 'Perderás tu turno' : ''].filter(Boolean).join(' · '));
@@ -78,15 +86,31 @@ export class DuelScene extends Phaser.Scene {
     await wait(this, ms);
   }
 
+  /** Cartuchos de la ronda: se enseñan 3 s con su color y luego se tapan. */
+  private drawShells(show: boolean): void {
+    this.shells.forEach((r) => r.destroy());
+    const n = this.d.chamber.length;
+    const real = this.d.loaded.real;
+    this.shells = Array.from({ length: n }, (_, i) => {
+      const x = W / 2 + (i - (n - 1) / 2) * 34;
+      const col = show ? (i < real ? C.danger : C.textDim) : C.wood;
+      const r = this.add.rectangle(x, 128, 22, 34, hex(col)).setStrokeStyle(2, 0x0d0a0e).setDepth(5);
+      this.tweens.add({ targets: r, scaleY: { from: 0.1, to: 1 }, duration: 180, delay: i * 40, ease: 'Back.easeOut' });
+      return r;
+    });
+  }
+
   private showCounts(): string {
     return T.duel.counts(this.d.loaded.real, this.d.loaded.fogueo);
   }
 
   private async announceRound(): Promise<void> {
     this.info.setText(this.showCounts());
+    this.drawShells(true);
     sfx.aim();
     await wait(this, 3000);
     this.info.setText(`${T.duel.hidden} (${this.d.chamber.length})`);
+    this.drawShells(false);
   }
 
   private async run(): Promise<void> {
@@ -172,11 +196,16 @@ export class DuelScene extends Phaser.Scene {
     const victimIsPlayer = event.target === 'player';
     if (event.shell === 'real') {
       sfx.shot();
-      const fl = this.add.rectangle(W / 2, targetY + (towardsBoss ? -60 : 60), 90, 90, hex(C.lamp)).setDepth(11);
-      this.tweens.add({ targets: fl, alpha: 0, scale: 2, duration: 600, onComplete: () => fl.destroy() });
+      const muzzleY = targetY + (towardsBoss ? -110 : 110);
+      const mz = this.add.image(W / 2, muzzleY, 'muzzle-0').setScale(4).setDepth(11);
+      [1, 2].forEach((f, i) => this.time.delayedCall(70 * (i + 1), () => mz.setTexture(`muzzle-${f}`)));
+      this.time.delayedCall(260, () => mz.destroy());
+      this.fx.smoke(W / 2, muzzleY, 8, 110);
+      this.fx.sparks(W / 2, muzzleY, 14, 0xf4d890, 520);
+      this.tweens.add({ targets: this.gun, y: targetY + (towardsBoss ? 26 : -26), duration: 70, yoyo: true, ease: 'Quad.easeOut' }); // retroceso
       flash(this, hex(C.lamp), 600, 0.5);
       if (victimIsPlayer) { shake(this, 5, 150, 8); flash(this, hex(C.blood), 700, 0.6); this.cb.setMood('sonrisa'); }
-      else { this.tweens.add({ targets: this.cb, x: W / 2 + 10, yoyo: true, repeat: 3, duration: 60 }); this.cb.setMood(this.d.hp.boss <= 1 ? 'cobra' : 'acecho'); }
+      else { this.cb.flinch(1); this.fx.sparks(W / 2, 270, 18, 0xe0503c, 380); this.cb.setMood(this.d.hp.boss <= 1 ? 'cobra' : 'acecho'); }
       this.msg.setText(T.duel.bang);
     } else {
       sfx.blank();
