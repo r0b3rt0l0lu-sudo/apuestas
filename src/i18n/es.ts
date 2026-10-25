@@ -37,8 +37,9 @@ export const T = {
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
     quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
-    controls: 'WASD o flechas: moverte · arrastra el ratón: mirar · E: usar · 1, 2, 3: ir a la mesa',
-    use: (name: string) => `[E] ${name}`
+    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F: usar · E: fumar · 1, 2, 3: mesas',
+    use: (name: string) => `[F] ${name}`,
+    smoke: ['«Fuma. Te queda poco tiempo y mucho humo.»', '«Esa tos no es del tabaco.»', '«Todo se consume, igual que tu cuota.»']
   },
 
   tutorial: [

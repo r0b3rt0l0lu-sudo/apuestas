@@ -7,9 +7,10 @@ import { session } from '../../core/session';
 import { quotaMet } from '../../core/state';
 import { T } from '../../i18n/es';
 import { HudDom } from '../../ui/dom/hud';
-import { attachNav, btn, el } from '../../ui/dom/kit';
+import { btn, el } from '../../ui/dom/kit';
 import { openOptions } from '../../ui/dom/options';
 import { Typewriter } from '../../ui/dom/typewriter';
+import { Cigarette } from '../cigarette';
 import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
 import { bulbString, box, carousel, cyl, glow, lam, mesh, reelDrum, rouletteTable, slotMachine } from '../models';
@@ -47,7 +48,7 @@ export class Hub3D extends Stage {
   private waiting: (() => void) | null = null;
   private prompt!: HTMLElement;
   private sleepBtn: HTMLButtonElement | null = null;
-  private detach: () => void = () => undefined;
+  private cig!: Cigarette;
   private stations: Station[] = [];
   private solids: Solid[] = [];
   private keys = new Set<string>();
@@ -79,6 +80,9 @@ export class Hub3D extends Stage {
       this.pitch = saved.pitch;
     }
     this.applyCamera();
+    this.scene.add(this.camera);
+    this.cig = new Cigarette(this.scene, this.camera);
+    this.cig.onFinished = (n) => { const l = T.hub.smoke[(n - 1) % T.hub.smoke.length]; if (l && !this.locked) void this.tw.say(l, true); };
 
     // interfaz
     this.hud = new HudDom(this.ui);
@@ -92,7 +96,6 @@ export class Hub3D extends Stage {
     const opts = btn(this.ui, T.options, () => openOptions(this.ui), { cls: 'small', style: { position: 'absolute', left: '16px', top: '100px' } });
     opts.classList.add('hit');
     this.buildSleep();
-    this.detach = attachNav(this.ui, () => openOptions(this.ui));
     this.bind();
     this.run(() => this.intro());
   }
@@ -238,18 +241,29 @@ export class Hub3D extends Stage {
   }
 
   private bind(): void {
-    const move = (e: Event): void => {
-      const pe = e as PointerEvent;
-      if (!(pe.buttons & 1) || pe.target !== engine.canvas || this.entering) return;
-      this.yaw -= pe.movementX * 0.004;
-      this.pitch = Math.max(-0.7, Math.min(0.7, this.pitch - pe.movementY * 0.004));
+    const look = (dx: number, dy: number): void => {
+      this.yaw -= dx * 0.0035;
+      this.pitch = Math.max(-0.7, Math.min(0.7, this.pitch - dy * 0.0035));
     };
-    this.on(window, 'pointermove', move);
+    this.on(window, 'pointermove', ((e: PointerEvent) => {
+      if (this.entering) return;
+      if (document.pointerLockElement === engine.canvas) look(e.movementX, e.movementY);
+      else if ((e.buttons & 1) && e.target === engine.canvas) look(e.movementX, e.movementY);
+    }) as EventListener);
+    // un clic en la sala captura el ratón (Esc lo suelta); si el navegador no lo permite, se mira arrastrando
+    this.on(engine.canvas, 'pointerdown', (() => {
+      if (this.entering || document.pointerLockElement === engine.canvas) return;
+      try { void (engine.canvas.requestPointerLock() as Promise<void> | undefined)?.catch(() => undefined); } catch { /* sin bloqueo de puntero */ }
+    }) as EventListener);
     this.on(window, 'keydown', ((e: KeyboardEvent) => {
-      if (e.target instanceof HTMLButtonElement && (e.key === 'Enter' || e.key === ' ')) return;
       const k = e.key.toLowerCase();
+      if (k === 'escape') { if (!document.pointerLockElement) openOptions(this.ui); return; }
+      const onBtn = e.target instanceof HTMLButtonElement;
       if (this.locked && (k === 'enter' || k === ' ')) { this.advance(); return; }
-      if (k === 'e') { this.interact(); return; }
+      if (onBtn && (k === 'enter' || k === ' ')) return;
+      if (k === 'z' && this.sleepBtn && !this.sleepBtn.disabled) { this.sleepBtn.click(); return; }
+      if (k === 'e') { if (!e.repeat) this.smoke(); return; }
+      if (k === 'f' || k === 'enter' || k === ' ') { e.preventDefault(); this.interact(); return; }
       const idx = ['1', '2', '3'].indexOf(k);
       if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); return; }
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.keys.add(k); e.preventDefault(); }
@@ -257,6 +271,10 @@ export class Hub3D extends Stage {
     this.on(window, 'keyup', ((e: KeyboardEvent) => { this.keys.delete(e.key.toLowerCase()); }) as EventListener);
     this.on(window, 'blur', () => this.keys.clear());
     this.on(this.ui, 'pointerdown', () => { if (!this.tw.skip()) this.waiting?.(); });
+  }
+
+  private smoke(): void {
+    if (!this.entering) this.cig.press();
   }
 
   private advance(): void {
@@ -340,6 +358,7 @@ export class Hub3D extends Stage {
     if (!s) return;
     this.entering = true;
     this.prompt.style.display = 'none';
+    this.cig.hide();
     saved = { night: r.night, x: this.pos.x, z: this.pos.z, yaw: this.yaw, pitch: this.pitch };
     session.dispatch({ type: 'enterTable' });
     const c0 = this.pos.clone();
@@ -369,6 +388,7 @@ export class Hub3D extends Stage {
     const p = engine.pointer;
     this.cobrador.setGaze((p.x - 640) / 500, (p.y - 300) / 300);
     this.cobrador.update(dt);
+    this.tickCig(dt, t);
     if (this.entering) return;
     this.walk(dt);
     this.pos.y = EYE + Math.sin(this.walked * 5) * 0.035;
@@ -376,10 +396,15 @@ export class Hub3D extends Stage {
     this.updateNear();
   }
 
+  private tickCig(dt: number, t: number): void {
+    this.cig.update(dt, t);
+  }
+
   dispose(): void {
     if (!this.entering) saved = { night: session.run.night, x: this.pos.x, z: this.pos.z, yaw: this.yaw, pitch: this.pitch };
     this.listeners.forEach(([t, fn, target]) => target.removeEventListener(t, fn));
-    this.detach();
+    this.cig?.dispose();
+    if (document.pointerLockElement) document.exitPointerLock();
     this.hud?.dispose();
     this.tw?.stop();
     super.dispose();

@@ -67,6 +67,12 @@ class Sfx {
   aim(): void { this.tone(300, 0.2, 'sawtooth', 0.06 * this.vSfx, 0, 120); }
   whisper(): void { for (let i = 0; i < 3; i++) this.noise(0.5, 0.05 * this.vSfx, 2500 + i * 700, i * 0.3, 4, 'bandpass'); }
   ballTick(): void { this.tone(1800 + Math.random() * 300, 0.012, 'square', 0.03 * this.vSfx); }
+  lighter(): void { this.tone(2600, 0.03, 'square', 0.06 * this.vSfx); this.noise(0.3, 0.08 * this.vSfx, 3200, 0.06, 1, 'highpass'); }
+  drag(): void {
+    this.noise(1.1, 0.1 * this.vSfx, 1800, 0, 0.8, 'bandpass');
+    for (let i = 0; i < 7; i++) this.noise(0.02, 0.05 * this.vSfx, 5000 + i * 300, 0.1 + i * 0.13, 1, 'highpass');
+  }
+  exhale(): void { this.noise(1.8, 0.09 * this.vSfx, 900, 0, 0.6); }
   glitch(): void { this.noise(0.12, 0.05 * this.vSfx, 4000, 0, 1, 'highpass'); }
 
   setDuck(v: number): void { this.duck = v; }
