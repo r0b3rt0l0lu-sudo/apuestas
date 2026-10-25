@@ -9,7 +9,7 @@ export const C = {
   bone: '#CFC6A8', rust: '#6E4A2E', patina: '#4E5A40'
 } as const;
 
-/** Mismos tokens como número para Phaser. */
+/** Mismos tokens como número (para Three.js). */
 export const hex = (c: string): number => parseInt(c.slice(1), 16);
 
 export const FONT_UI = 'VT323';

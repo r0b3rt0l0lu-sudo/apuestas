@@ -1,0 +1,70 @@
+:root {
+  --bg: #020001; --panel: #0b0305; --text: #ece0c0; --dim: #948068; --gold: #c4b494; --lamp: #ece0c0;
+  --danger: #9c3c28; --dangerText: #c4b494; --ok: #76895a; --blood: #561a1a;
+}
+html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
+#app { position: absolute; left: 50%; top: 50%; width: 1280px; height: 800px; margin: -400px 0 0 -640px; transform-origin: 50% 50%; font-family: 'VT323', monospace; color: var(--text); user-select: none; }
+.gl { position: absolute; left: 0; top: 0; width: 1280px; height: 800px; image-rendering: pixelated; display: block; }
+#ui { position: absolute; inset: 0; pointer-events: none; }
+.stage-ui { position: absolute; inset: 0; pointer-events: none; }
+.hit, .btn, .tw { pointer-events: auto; }
+.txt { text-shadow: 2px 2px 0 #000; }
+.title { font-family: 'Special Elite', serif; text-shadow: 3px 3px 0 #000; }
+.center { text-align: center; }
+.abs { position: absolute; }
+
+/* marcos de pixel art: la imagen llega desde JS en las variables --f-* */
+.frame { border: 16px solid transparent; border-image-slice: 8; border-image-width: 16px; border-image-repeat: stretch; image-rendering: pixelated; background-clip: padding-box; box-sizing: border-box; }
+.frame.panel { border-image-source: var(--f-panel); background: #0b0305ee; }
+.frame.dialog { border-image-source: var(--f-dialog); background: #0b0305ee; }
+
+.btn {
+  font: 32px 'VT323', monospace; color: var(--text); text-shadow: 2px 2px 0 #000; cursor: pointer; text-transform: none;
+  border: 16px solid transparent; border-image-slice: 8; border-image-width: 16px; border-image-source: var(--f-btn); image-rendering: pixelated;
+  background: #0b0305; background-clip: padding-box; padding: 0 10px; min-height: 64px; box-sizing: border-box; line-height: 1; outline: none;
+  display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; margin: 0;
+}
+.btn small { font-size: 24px; color: var(--dim); }
+.btn:hover:not(:disabled), .btn:focus-visible { border-image-source: var(--f-btn-f); color: #fff6dc; transform: translateY(-2px); }
+.btn:active:not(:disabled) { transform: translateY(2px); }
+.btn.sel { border-image-source: var(--f-btn-t); background: #26090e; color: #fff6dc; }
+.btn:disabled { border-image-source: var(--f-btn-d); color: var(--dim); cursor: not-allowed; opacity: .75; }
+.btn.big { font-size: 40px; min-height: 80px; }
+.btn.small { font-size: 24px; min-height: 48px; }
+.row { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.label { color: var(--dim); font-size: 28px; }
+
+/* HUD */
+.hud { position: absolute; left: 0; top: 0; width: 1280px; height: 84px; box-sizing: border-box; border-width: 8px 8px 12px; border-style: solid; border-color: transparent; border-image-source: var(--f-panel); border-image-slice: 8; border-image-width: 8px 8px 12px; background: #0b0305ee; background-clip: padding-box; image-rendering: pixelated; }
+.hud > * { position: absolute; }
+.hud .night { left: 16px; top: 4px; font-size: 32px; color: #ece0c0; }
+.hud .bal { left: 360px; top: 2px; width: 380px; text-align: center; font-size: 36px; color: #ece0c0; display: flex; align-items: center; justify-content: center; gap: 8px; }
+.hud .bal img { width: 24px; height: 24px; image-rendering: pixelated; }
+.hud .gauge { left: 244px; top: 44px; width: 440px; height: 24px; background: #020001; border: 2px solid #6a5240; box-sizing: border-box; display: flex; gap: 2px; padding: 2px; }
+.hud .gauge i { flex: 1; background: #26090e; display: block; }
+.hud .gauge i.on { background: #948068; box-shadow: inset 0 3px 0 #c4b494; }
+.hud .gauge i.hot { background: #c4b494; }
+.hud .gauge.met i.on { background: #ece0c0; }
+.hud .quota { left: 700px; top: 40px; font-size: 24px; color: var(--text); }
+.hud .acts { right: 16px; top: 4px; font-size: 32px; color: #ece0c0; text-align: right; }
+.hud .ticks { right: 12px; top: 40px; display: flex; gap: 1px; height: 32px; align-items: flex-end; }
+.hud .ticks img { width: 16px; height: 32px; image-rendering: pixelated; transform-origin: 50% 100%; }
+.hud .ticks img.snuff { animation: snuff .3s steps(4); }
+@keyframes snuff { 0% { transform: scaleY(1.4); } 100% { transform: scaleY(1); } }
+.float { position: absolute; font-size: 32px; pointer-events: none; animation: floaty 1.3s steps(12) forwards; text-shadow: 2px 2px 0 #000; }
+@keyframes floaty { from { transform: translateY(0); opacity: 1; } to { transform: translateY(38px); opacity: 0; } }
+
+/* diálogo del Cobrador */
+.dlg { position: absolute; left: 40px; right: 40px; bottom: 24px; height: 140px; padding: 6px 10px; font-size: 32px; line-height: 1.15; color: #fff6dc; text-shadow: 2px 2px 0 #000; }
+.tag { position: absolute; font-size: 28px; color: var(--dim); text-shadow: 2px 2px 0 #000; }
+.msg { position: absolute; left: 0; right: 0; text-align: center; font-size: 30px; color: #ece0c0; text-shadow: 2px 2px 0 #000; }
+
+/* superposiciones */
+.overlay { position: absolute; inset: 0; background: #000000d8; display: flex; align-items: center; justify-content: center; pointer-events: auto; z-index: 50; }
+.overlay .box { width: 900px; max-width: 1000px; padding: 6px 20px 18px; text-align: center; }
+.overlay h2 { font-family: 'Special Elite', serif; font-size: 40px; margin: 14px 0 12px; color: #ece0c0; font-weight: normal; }
+.overlay p { font-size: 32px; margin: 0 0 14px; line-height: 1.12; }
+.overlay .row { margin-top: 12px; }
+.pill { width: 100%; }
+
+@media (prefers-reduced-motion: reduce) { .btn:hover:not(:disabled), .btn:focus-visible { transform: none; } }

@@ -7,15 +7,10 @@
 <style>
   @font-face { font-family: 'VT323'; src: url('./fonts/VT323.ttf') format('truetype'); font-display: block; }
   @font-face { font-family: 'Special Elite'; src: url('./fonts/SpecialElite.ttf') format('truetype'); font-display: block; }
-  html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
-  #game { width: 100%; height: 100%; }
-  .preload-font { position: absolute; left: -9999px; font-family: 'VT323'; }
-  .preload-font2 { position: absolute; left: -9999px; font-family: 'Special Elite'; }
 </style>
 </head>
 <body>
-<div class="preload-font">.</div><div class="preload-font2">.</div>
-<div id="game"></div>
-<script type="module" src="/src/main.ts"></script>
+<div id="app"><div id="ui"></div></div>
+<script type="module" src="/src/main3d.ts"></script>
 </body>
 </html>
