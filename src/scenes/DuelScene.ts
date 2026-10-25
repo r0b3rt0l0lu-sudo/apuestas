@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, W, hex } from '../config';
 import { cursesFor } from '../core/nights';
@@ -50,6 +51,7 @@ export class DuelScene extends Phaser.Scene {
     this.candlesP = []; this.candlesB = []; this.ui = []; this.bossIcons = [];
 
     duelBackdrop(this);
+    setLight(640, 330, 800, 0.16);
     this.fx = new FX(this, 2);
     this.add.nineslice(W / 2, 40, 'ui-panel', undefined, 190, 22, 8, 8, 8, 8).setScale(2).setDepth(4);
     label(this, W / 2, 14, T.duel.title, { title: true, size: 32, align: 'center', color: C.textBright, depth: 5 });

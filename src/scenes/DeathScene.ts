@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, H, W, hex } from '../config';
 import { session } from '../core/session';
@@ -17,6 +18,7 @@ export class DeathScene extends Phaser.Scene {
     const r = session.run;
     if (r.phase !== 'dead') { goPhase(this); return; }
     sfx.ambience('none');
+    setLight(640, 400, 700, 0.1);
     this.add.rectangle(W / 2, H / 2, W, H, hex('#0A0608'));
     const fx = new FX(this, 2);
     const candle = new Candle(this, 140, 650, 6);

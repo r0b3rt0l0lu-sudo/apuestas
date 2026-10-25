@@ -327,14 +327,14 @@ export function drawCabinet(): { body: Painter; bulbs: Painter[]; lever: Painter
 /** Sala de la ruleta: papel verde oscuro, mesa de fieltro con borde de madera. */
 export function drawFeltRoom(): { bg: Painter; flames: Painter[] } {
   const p = P();
-  p.rect(0, 0, SW, SH, '#0c1812');
+  p.rect(0, 0, SW, SH, '#10140c');
   for (let y = 0; y < SH; y += 12) for (let x = 0; x < SW; x += 12) {
-    if (((x + y) / 12) % 2 === 0) p.rect(x + 4, y + 4, 4, 4, '#12241b');
-    else p.px(x + 6, y + 6, '#17301f');
+    if (((x + y) / 12) % 2 === 0) p.rect(x + 4, y + 4, 4, 4, '#1c2414');
+    else p.px(x + 6, y + 6, '#26301a');
   }
   for (let y = 0; y < 60; y++) for (let x = 0; x < SW; x++) if (bayer(x, y) < (1 - y / 60) * 0.55) p.px(x, y, '#050a07');
   // mesa
-  const felt = ramp('#1f4a34');
+  const felt = ramp('#5a7a3a');
   p.rect(6, 34, 306, 160, '#150e08');
   p.rect(8, 36, 302, 156, '#3b2616');
   p.rect(8, 36, 302, 2, '#5e3e24').rect(8, 190, 302, 2, '#22140a');

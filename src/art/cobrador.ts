@@ -6,7 +6,7 @@ export const MOODS: readonly Mood[] = ['acecho', 'sonrisa', 'cobra'];
 export const SIZE = 96;
 
 const K = '#06020a';
-const COIN = ramp('#d4ae44'), BRASS = ramp('#a88a4a'), VERD = ramp('#4a9a78'), BONE = ramp('#dcd0b4');
+const COIN = ramp('#dccfa4'), BRASS = ramp('#a89870'), VERD = ramp('#5a8a4a'), BONE = ramp('#e8dcc0');
 const COAT = ramp('#241632'), HAT = ramp('#2a1c38'), INK = ramp('#160a24'), RED = ramp('#c8281c');
 const HC = { x: 48, y: 47, r: 30 }; // moneda-cabeza
 const LS = { x: 34, y: 47 }; // cuenca vacía

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, W } from '../config';
 import { GAMES, type Game, TABLES, canPlay, minBet } from '../core/economy';
@@ -28,6 +29,7 @@ export class HubScene extends Phaser.Scene {
     if (ph !== 'hub' && ph !== 'playing') { goPhase(this); return; }
     if (ph === 'playing') session.dispatch({ type: 'leaveTable' });
     fadeIn(this);
+    setLight(520, 400, 1050, 0.36);
     fairBackdrop(this);
     new Hud(this);
     sfx.ambience('hub');

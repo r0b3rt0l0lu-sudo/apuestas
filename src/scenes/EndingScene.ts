@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, W } from '../config';
 import { session } from '../core/session';
@@ -18,6 +19,7 @@ export class EndingScene extends Phaser.Scene {
     fadeIn(this, 800);
     sfx.ambience('none');
     dawnBackdrop(this, true);
+    setLight(640, 420, 1700, 0.95);
     const fx = new FX(this, 2);
     this.time.addEvent({ delay: 1400, loop: true, callback: () => fx.confetti(Phaser.Math.Between(200, 1080), 260, 16) });
     const t = label(this, W / 2, 50, T.ending.title, { title: true, size: 80, align: 'center', color: C.lamp, depth: 6 });

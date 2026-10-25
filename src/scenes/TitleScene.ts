@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, H, W } from '../config';
 import { session, sceneForPhase } from '../core/session';
@@ -22,6 +23,7 @@ export class TitleScene extends Phaser.Scene {
 
   create(): void {
     fadeIn(this);
+    setLight(640, 400, 1000, 0.28);
     fairBackdrop(this);
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000, 0.35).setDepth(-4);
     const fx = new FX(this, 2);

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, W, hex } from '../config';
 import { cursesFor } from '../core/nights';
@@ -40,6 +41,7 @@ export class RaceScene extends TableScene {
 
   protected build(): void {
     this.horses = [];
+    setLight(640, 380, 1150, 0.45);
     this.laneBtns = [];
     this.places = [];
     this.racing = false;

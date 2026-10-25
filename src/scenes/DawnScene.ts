@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { C, W } from '../config';
 import { LAST_NIGHT, nightDef } from '../core/nights';
@@ -22,6 +23,7 @@ export class DawnScene extends Phaser.Scene {
     fadeIn(this, 560);
     sfx.ambience('hub');
     dawnBackdrop(this);
+    setLight(640, 420, 1700, 0.92);
     const fx = new FX(this, 2);
     this.time.delayedCall(900, () => fx.confetti(W / 2, 300, 30));
     this.add.nineslice(W / 2, 252, 'ui-panel', undefined, 200, 38, 8, 8, 8, 8).setScale(2).setDepth(4).setAlpha(0.94);

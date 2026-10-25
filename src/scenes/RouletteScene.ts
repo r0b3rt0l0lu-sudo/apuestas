@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { drawWheel } from '../art/wheel';
 import { C, hex } from '../config';
@@ -46,6 +47,7 @@ export class RouletteScene extends TableScene {
 
   protected build(): void {
     this.anim = null;
+    setLight(400, 400, 980, 0.3);
     this.kindBtns.clear();
     this.fx = new FX(this, 2);
     const curses = cursesFor(session.run.night);

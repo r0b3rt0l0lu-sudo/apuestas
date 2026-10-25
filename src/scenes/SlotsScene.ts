@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { setLight } from '../fx/look';
 import { sfx } from '../audio/sfx';
 import { PAPER_COLOR } from '../art/props';
 import { symbolKey } from '../art/textures';
@@ -59,8 +60,10 @@ export class SlotsScene extends TableScene {
   protected build(): void {
     this.reels = [];
     this.spinning = false;
+    setLight(640, 340, 980, 0.32);
     this.fx = new FX(this, 2);
-    const curses = cursesFor(session.run.night);
+    const curses
+     = cursesFor(session.run.night);
     this.marquee = label(this, W / 2, 106, T.slots.title, { title: true, size: 32, align: 'center', color: C.lamp, depth: 5 });
     lampFlicker(this, [this.marquee], 1);
     this.cb = new CobradorSprite(this, 150, 420, 3).setDepth(8);
