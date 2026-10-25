@@ -68,3 +68,10 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .pill { width: 100%; }
 
 @media (prefers-reduced-motion: reduce) { .btn:hover:not(:disabled), .btn:focus-visible { transform: none; } }
+
+/* título */
+.tl { display: inline-block; animation: tflick 7s steps(1) infinite; }
+@keyframes tflick { 0%, 91%, 100% { opacity: 1; } 92% { opacity: .2; } 94% { opacity: .9; } 96% { opacity: .35; } 98% { opacity: 1; } }
+.tglitch { transform: translate(-7px, 2px); text-shadow: 5px 0 #e0503c, -5px 0 #3a6a5a, 3px 3px 0 #000 !important; }
+.tsoft { opacity: .55; }
+.tmenu .btn { text-align: left; padding-left: 26px; }

@@ -4,7 +4,7 @@ import { session } from '../../core/session';
 import { T } from '../../i18n/es';
 import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
-import { ground, lam, lampPost, sky, tent } from '../models';
+import { ferris, ground, lam, lampPost, sky, tent } from '../models';
 import { Stage } from '../stage';
 import { attachNav, btn, el } from '../../ui/dom/kit';
 import { openOptions } from '../../ui/dom/options';
@@ -21,6 +21,11 @@ export class Title3D extends Stage {
   private ev: Float32Array = new Float32Array(0);
   private detach: () => void = () => undefined;
   private menu!: HTMLElement;
+  private fer!: ReturnType<typeof ferris>;
+  private lamp!: ReturnType<typeof lampPost>;
+  private moths!: THREE.Points;
+  private titleEl!: HTMLElement;
+  private nextGlitch = 3;
 
   init(): void {
     this.light(640, 400, 1000, 0.28);
@@ -37,7 +42,14 @@ export class Title3D extends Stage {
     const lp = lampPost(0xe8b868, 16, 18);
     lp.group.position.set(-5.5, 0, -3);
     sc.add(lp.group);
-    this.cobrador = new Cobrador3D(0.04).anchor(0, 2.15, 0);
+    this.fer = ferris(9);
+    this.fer.group.position.set(-9, 0, -26);
+    sc.add(this.fer.group);
+    this.lamp = lp;
+    const mp = new Float32Array(30);
+    this.moths = new THREE.Points(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(mp, 3)), new THREE.PointsMaterial({ color: 0xece0c0, size: 3, sizeAttenuation: false, fog: false }));
+    sc.add(this.moths);
+    this.cobrador = new Cobrador3D(0.045).anchor(2.4, 2.4, 0);
     sc.add(this.cobrador);
     const key = new THREE.PointLight(0xe8b868, 18, 14, 1.4);
     key.position.set(2.5, 4, 3);
@@ -46,7 +58,7 @@ export class Title3D extends Stage {
     rim.position.set(-3, 3, -2);
     sc.add(rim);
     this.camera.position.set(0, 2.2, 6.5);
-    this.camera.lookAt(0, 2.5, 0);
+    this.camera.lookAt(1.2, 2.5, 0);
 
     // brasas
     const n = 70, pos = new Float32Array(n * 3);
@@ -57,18 +69,32 @@ export class Title3D extends Stage {
     this.embers = new THREE.Points(geo, new THREE.PointsMaterial({ color: 0xe0701e, size: 3, sizeAttenuation: false, fog: false }));
     sc.add(this.embers);
 
-    // interfaz
-    const title = el('div', 'title center abs', T.title, this.ui);
-    Object.assign(title.style, { left: '0', right: '0', top: '22px', fontSize: '84px', color: '#ece0c0', textShadow: '0 6px 0 #561a1a, 3px 3px 0 #000' });
-    const sub = el('div', 'center abs txt', T.subtitle, this.ui);
-    Object.assign(sub.style, { left: '0', right: '0', top: '126px', fontSize: '34px', color: '#948068' });
-    this.menu = el('div', 'row hit', '', this.ui);
-    Object.assign(this.menu.style, { position: 'absolute', left: '0', right: '0', bottom: '70px', gap: '28px' });
-    if (session.hasSave()) btn(this.menu, T.continue, () => this.go(true), { cls: 'big', style: { width: '320px' } });
-    btn(this.menu, T.newGame, () => (session.hasSave() ? this.confirmNew() : this.go(false)), { cls: 'big', style: { width: '320px' } });
-    btn(this.menu, T.options, () => openOptions(this.ui), { cls: 'big', style: { width: '320px' } });
-    const hint = el('div', 'center abs txt', T.keysHint, this.ui);
-    Object.assign(hint.style, { left: '0', right: '0', bottom: '22px', fontSize: '24px', color: '#948068' });
+    // interfaz: título a la izquierda con letras que parpadean, menú en columna
+    const words = T.title.split(' ');
+    const last = words.pop() ?? '';
+    const lines: Array<[string, number, string]> = [[words.join(' '), 74, '#ece0c0'], [last, 150, '#c24a3a']];
+    this.titleEl = el('div', 'title abs', '', this.ui);
+    Object.assign(this.titleEl.style, { left: '72px', top: '46px', lineHeight: '0.95', textShadow: '3px 3px 0 #000, 0 7px 0 #3c0f14', transition: 'none' });
+    lines.forEach(([txt, size, col]) => {
+      const row = el('div', '', '', this.titleEl);
+      Object.assign(row.style, { fontSize: `${size}px`, color: col, whiteSpace: 'nowrap' });
+      for (const ch of txt) {
+        const sp = el('span', 'tl', ch === ' ' ? '\u00a0' : ch, row);
+        sp.style.animationDelay = `-${(Math.random() * 7).toFixed(2)}s`;
+      }
+    });
+    const sub = el('div', 'abs txt', T.subtitle, this.ui);
+    Object.assign(sub.style, { left: '78px', top: '372px', fontSize: '34px', color: '#948068', textShadow: '2px 2px 0 #000' });
+    const quote = T.titleQuotes[Math.floor(Math.random() * T.titleQuotes.length)] ?? '';
+    const q = el('div', 'abs txt', quote, this.ui);
+    Object.assign(q.style, { right: '60px', top: '60px', fontSize: '34px', color: '#c4b494', textShadow: '2px 2px 0 #000', fontFamily: "'Special Elite', serif" });
+    this.menu = el('div', 'hit tmenu', '', this.ui);
+    Object.assign(this.menu.style, { position: 'absolute', left: '72px', top: '440px', display: 'flex', flexDirection: 'column', gap: '14px' });
+    if (session.hasSave()) btn(this.menu, T.continue, () => this.go(true), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
+    btn(this.menu, T.newGame, () => (session.hasSave() ? this.confirmNew() : this.go(false)), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
+    btn(this.menu, T.options, () => openOptions(this.ui), { cls: 'big', style: { width: '420px', minHeight: '66px' } });
+    const hint = el('div', 'abs txt', T.keysHint, this.ui);
+    Object.assign(hint.style, { left: '72px', bottom: '22px', fontSize: '24px', color: '#948068' });
     this.detach = attachNav(this.menu);
     if (!warned) this.warning();
     void lam;
@@ -94,7 +120,12 @@ export class Title3D extends Stage {
     const p = engine.pointer;
     this.cobrador.setGaze((p.x - 640) / 380, (p.y - 330) / 260);
     this.cobrador.update(dt);
-    this.cobrador.anchor(0, 2.15 + Math.sin(t * 0.8) * 0.05, 0);
+    this.cobrador.anchor(2.4, 2.4 + Math.sin(t * 0.8) * 0.05, 0);
+    this.fer.update(dt);
+    this.lamp.light.intensity = 16 * (1 - 0.35 * Math.max(0, Math.sin(t * 11) * Math.sin(t * 3.7) - 0.6) * 2.5);
+    const ma = this.moths.geometry.getAttribute('position') as THREE.BufferAttribute;
+    for (let i = 0; i < ma.count; i++) ma.setXYZ(i, -5.5 + Math.cos(t * (1.3 + i * 0.17) + i) * (0.5 + i * 0.07), 4.9 + Math.sin(t * (2.1 + i * 0.11) + i * 2) * 0.5, -3 + Math.sin(t * (1.1 + i * 0.13) + i) * 0.6);
+    ma.needsUpdate = true;
     const a = this.embers.geometry.getAttribute('position') as THREE.BufferAttribute;
     for (let i = 0; i < a.count; i++) {
       let y = a.getY(i) + dt * this.ev[i]!;
@@ -103,8 +134,17 @@ export class Title3D extends Stage {
       a.setX(i, a.getX(i) + Math.sin(t + i) * dt * 0.2);
     }
     a.needsUpdate = true;
-    this.camera.position.set(Math.sin(t * 0.2) * 0.25, 2.2 + Math.sin(t * 0.5) * 0.04, 6.5 - Math.sin(t * 0.1) * 0.3);
-    this.camera.lookAt(0, 2.5, 0);
+    // glitch irregular del título: un fotograma cada pocos segundos
+    this.nextGlitch -= dt;
+    if (this.nextGlitch <= 0) {
+      this.nextGlitch = 3.5 + Math.random() * 5;
+      const cls = session.options.reduceFlash ? 'tsoft' : 'tglitch';
+      this.titleEl.classList.add(cls);
+      window.setTimeout(() => this.titleEl.classList.remove(cls), 150);
+    }
+    const px = (p.x - 640) / 640, py = (p.y - 400) / 400;
+    this.camera.position.set(Math.sin(t * 0.2) * 0.25 + px * 0.5, 2.2 + Math.sin(t * 0.5) * 0.04 - py * 0.2, 6.5 - Math.sin(t * 0.1) * 0.3);
+    this.camera.lookAt(1.2 + px * 0.4, 2.5, 0);
   }
 
   dispose(): void {

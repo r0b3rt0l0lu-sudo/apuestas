@@ -24,11 +24,13 @@ const HALF_X = 6.8;
 const Z_MIN = -8.6;
 const Z_MAX = 6.6;
 const RADIUS = 0.35;
-const REACH = 1.9;
+const REACH = 2.6;
 const EYE = 1.65;
 
 interface Solid { x: number; z: number; hx: number; hz: number }
 interface Station { game: Game; solid: Solid; cam: THREE.Vector3; look: THREE.Vector3 }
+
+const game3dHeight = (g: Game): number => (g === 'slots' ? 3.4 : g === 'roulette' ? 2.4 : 4.6);
 
 /** Última posición en la sala, para volver donde estabas al salir de una mesa. */
 let saved: { night: number; x: number; z: number; yaw: number; pitch: number } | null = null;
@@ -48,6 +50,7 @@ export class Hub3D extends Stage {
   private waiting: (() => void) | null = null;
   private prompt!: HTMLElement;
   private sleepBtn: HTMLButtonElement | null = null;
+  private labels: Array<{ el: HTMLElement; s: Station }> = [];
   private cig!: Cigarette;
   private stations: Station[] = [];
   private solids: Solid[] = [];
@@ -96,6 +99,11 @@ export class Hub3D extends Stage {
     const opts = btn(this.ui, T.options, () => openOptions(this.ui), { cls: 'small', style: { position: 'absolute', left: '16px', top: '100px' } });
     opts.classList.add('hit');
     this.buildSleep();
+    this.stations.forEach((s) => {
+      const l = el('div', '', T.hub[s.game], this.ui);
+      Object.assign(l.style, { position: 'absolute', transform: 'translate(-50%,-50%)', fontFamily: "'Special Elite', serif", fontSize: '32px', color: '#ece0c0', textShadow: '2px 2px 0 #000, -2px 2px 0 #000, 0 0 14px #c24a3a', whiteSpace: 'nowrap', pointerEvents: 'none', display: 'none' });
+      this.labels.push({ el: l, s });
+    });
     this.bind();
     this.run(() => this.intro());
   }
@@ -199,7 +207,7 @@ export class Hub3D extends Stage {
     sc.add(spot);
     this.stations.forEach((s, i) => {
       const obj = [slot.group, rt.group, car.group][i] ?? slot.group;
-      this.click(obj, () => { if (this.near === s) this.interact(); }, { enabled: () => !this.locked && !this.entering && this.near === s });
+      this.click(obj, () => { if (this.near === s) this.interact(); }, { enabled: () => !this.entering && this.near === s });
     });
   }
 
@@ -259,11 +267,11 @@ export class Hub3D extends Stage {
       const k = e.key.toLowerCase();
       if (k === 'escape') { if (!document.pointerLockElement) openOptions(this.ui); return; }
       const onBtn = e.target instanceof HTMLButtonElement;
-      if (this.locked && (k === 'enter' || k === ' ')) { this.advance(); return; }
       if (onBtn && (k === 'enter' || k === ' ')) return;
+      if (k === 'enter' || k === ' ') { e.preventDefault(); if (this.locked) this.advance(); else this.interact(); return; }
       if (k === 'z' && this.sleepBtn && !this.sleepBtn.disabled) { this.sleepBtn.click(); return; }
       if (k === 'e') { if (!e.repeat) this.smoke(); return; }
-      if (k === 'f' || k === 'enter' || k === ' ') { e.preventDefault(); this.interact(); return; }
+      if (k === 'f') { e.preventDefault(); this.interact(); return; }
       const idx = ['1', '2', '3'].indexOf(k);
       if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); return; }
       if (['w', 'a', 's', 'd', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].includes(k)) { this.keys.add(k); e.preventDefault(); }
@@ -324,12 +332,12 @@ export class Hub3D extends Stage {
     const r = session.run, g = best.game;
     const ok = canPlay(g, r.balance, r.actionsLeft);
     this.prompt.style.display = 'block';
-    this.prompt.style.opacity = ok && !this.locked ? '1' : '0.6';
+    this.prompt.style.opacity = ok ? '1' : '0.6';
     this.prompt.textContent = `${T.hub.use(T.hub[g])} · ${ok ? T.hub.cost(TABLES[g].cost, minBet(g)) : T.hub.unavailable}`;
   }
 
   private interact(): void {
-    if (this.near && !this.locked && !this.entering) void this.enter(this.near.game);
+    if (this.near && !this.entering) void this.enter(this.near.game);
   }
 
   // ---------- flujo ----------
@@ -338,12 +346,16 @@ export class Hub3D extends Stage {
     const r = session.run;
     const key = `intro-${r.night}`;
     if (r.flags[key]) { await this.tw.say(quotaMet(r) ? T.hub.quotaMet : T.night.intro(r.night), true); return; }
+    // el diálogo avanza solo (Intro lo acelera) y nunca impide moverse ni entrar en una mesa
     this.locked = true;
     session.dispatch({ type: 'flag', key });
-    const adv = () => new Promise<void>((res) => { this.waiting = () => { this.waiting = null; res(); }; });
+    const adv = () => new Promise<void>((res) => {
+      const timer = window.setTimeout(() => { this.waiting = null; res(); }, 2600);
+      this.waiting = () => { window.clearTimeout(timer); this.waiting = null; res(); };
+    });
     if (r.night === 1 && !r.flags.tutorial) {
-      for (const line of T.tutorial) { await this.tw.say(line, true); await adv(); }
       session.dispatch({ type: 'flag', key: 'tutorial' });
+      for (const line of T.tutorial) { await this.tw.say(line, true); await adv(); }
     }
     await this.tw.say(T.night.intro(r.night), true);
     const curse = T.night.curseLine(r.night);
@@ -353,7 +365,7 @@ export class Hub3D extends Stage {
 
   private async enter(g: Game): Promise<void> {
     const r = session.run;
-    if (this.locked || this.entering || !canPlay(g, r.balance, r.actionsLeft)) return;
+    if (this.entering || !canPlay(g, r.balance, r.actionsLeft)) return;
     const s = this.stations.find((x) => x.game === g);
     if (!s) return;
     this.entering = true;
@@ -394,6 +406,22 @@ export class Hub3D extends Stage {
     this.pos.y = EYE + Math.sin(this.walked * 5) * 0.035;
     this.applyCamera();
     this.updateNear();
+    this.placeLabels();
+  }
+
+  private placeLabels(): void {
+    const v = new THREE.Vector3();
+    for (const { el: l, s } of this.labels) {
+      v.set(s.solid.x, game3dHeight(s.game), s.solid.z);
+      const d = v.distanceTo(this.pos);
+      v.project(this.camera);
+      const vis = v.z < 1 && Math.abs(v.x) < 1.1 && d < 11 && !this.entering;
+      l.style.display = vis ? 'block' : 'none';
+      if (!vis) continue;
+      l.style.left = `${(v.x * 0.5 + 0.5) * 1280}px`;
+      l.style.top = `${(-v.y * 0.5 + 0.5) * 800}px`;
+      l.style.opacity = this.near === s ? '1' : String(Math.max(0.8, 1 - d / 20));
+    }
   }
 
   private tickCig(dt: number, t: number): void {

@@ -6,6 +6,7 @@ export const fmt = (n: number): string => n.toLocaleString('es-ES');
 export const T = {
   title: 'LA ÚLTIMA FERIA',
   subtitle: 'Una noche más. Una cuota más.',
+  titleQuotes: ['«Te estaba esperando.»', '«Siempre vuelven.»', '«La casa nunca duerme.»', '«Entra. La puerta ya está cerrada.»'],
   warnTitle: 'AVISO',
   warnBody: [
     'Contenido solo para mayores de 18 años.',
@@ -37,7 +38,7 @@ export const T = {
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
     quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
-    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F: usar · E: fumar · 1, 2, 3: mesas',
+    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F o Intro: entrar en la mesa · E: fumar · 1, 2, 3: mesas',
     use: (name: string) => `[F] ${name}`,
     smoke: ['«Fuma. Te queda poco tiempo y mucho humo.»', '«Esa tos no es del tabaco.»', '«Todo se consume, igual que tu cuota.»']
   },
