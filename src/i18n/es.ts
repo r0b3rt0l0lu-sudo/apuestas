@@ -36,7 +36,9 @@ export const T = {
     cost: (c: number, min: number) => `${c} ${c === 1 ? 'acción' : 'acciones'} · apuesta mínima ${fmt(min)}`,
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
-    quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»'
+    quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
+    controls: 'WASD o flechas: moverte · arrastra el ratón: mirar · E: usar · 1, 2, 3: ir a la mesa',
+    use: (name: string) => `[E] ${name}`
   },
 
   tutorial: [

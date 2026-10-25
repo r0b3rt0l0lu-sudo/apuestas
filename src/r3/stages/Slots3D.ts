@@ -1,6 +1,5 @@
 import * as THREE from 'three';
-import { drawSeven, drawCandle } from '../../art/props';
-import * as props from '../../art/props';
+import { drawCandle } from '../../art/props';
 import { sfx } from '../../audio/sfx';
 import { cursesFor } from '../../core/nights';
 import { quotaOfRun, session } from '../../core/session';
@@ -13,28 +12,11 @@ import { Cobrador3D } from '../cobrador3d';
 import { Fx3D } from '../fx3d';
 import { engine } from '../engine';
 import { box, glow, lam, mesh, reelDrum, slotMachine, textures } from '../models';
-import { canvasTex } from '../tex';
-import { Painter } from '../../art/painter';
 import { ease } from '../tween';
+import { stripTexture, symPainter } from '../strip';
 import { TableStage } from './TableStage';
 
 const FACE = Math.PI / 3; // seis símbolos por tambor
-const symPainter = (s: SlotSymbol): Painter => ({ ojo: () => props.drawEyeSymbol('abierto'), diente: props.drawTooth, polilla: props.drawMoth, llave: props.drawKey, calavera: props.drawSkull, siete: () => drawSeven(0) } as Record<SlotSymbol, () => Painter>)[s]();
-
-/** Banda del tambor: un símbolo por cara, girado 90° para que se vea derecho sobre el cilindro. */
-function stripTexture(): THREE.CanvasTexture {
-  const p = new Painter(24 * 6, 24);
-  SYMBOLS.forEach((s, i) => {
-    const sp = symPainter(s);
-    p.ctx.save();
-    p.ctx.translate(i * 24 + 12, 12);
-    p.ctx.rotate(Math.PI / 2);
-    p.ctx.drawImage(sp.canvas, -12, -12);
-    p.ctx.restore();
-  });
-  return canvasTex(p.canvas);
-}
-
 /** Tragaperras en 3D: mueble lacado, tambores que giran, palanca y bombillas. */
 export class Slots3D extends TableStage {
   readonly kind = 'slots';
