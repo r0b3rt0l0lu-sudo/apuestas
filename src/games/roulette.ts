@@ -31,7 +31,7 @@ export const OUTSIDE_KINDS = ['rojo', 'negro', 'par', 'impar', 'bajo', 'alto'] a
 
 function wins(bet: RouletteBet, p: Pocket): boolean {
   if (bet.kind === 'pleno') return bet.n === p;
-  if (p === 0 || p === DOUBLE_ZERO) return false; // el 0 pierde las apuestas exteriores
+  if (p === 0 || p === DOUBLE_ZERO) return false; // el 0 no gana ninguna exterior (devuelven la mitad, ver payoutFor)
   switch (bet.kind) {
     case 'rojo': return colorOf(p) === 'rojo';
     case 'negro': return colorOf(p) === 'negro';
@@ -42,8 +42,9 @@ function wins(bet: RouletteBet, p: Pocket): boolean {
   }
 }
 
-/** Total devuelto (incluye lo apostado): pleno ×36, exteriores ×2. */
+/** Total devuelto (incluye lo apostado): pleno ×36, exteriores ×2; el 0 (y el 00) devuelve la mitad de las exteriores. */
 export function payoutFor(bet: RouletteBet, chip: number, p: Pocket): number {
+  if (bet.kind !== 'pleno' && (p === 0 || p === DOUBLE_ZERO)) return chip / 2;
   if (!wins(bet, p)) return 0;
   return chip * (bet.kind === 'pleno' ? 36 : 2);
 }

@@ -38,6 +38,8 @@ export class Cobrador3D extends THREE.Group {
   private kick = new THREE.Vector3();
   private pulse = 0;
   private base = new THREE.Vector3();
+  /** Sin cuerpo de arte: solo cabeza, sombrero y polillas (el cuerpo lo pone un modelo 3D). */
+  bodyless = false;
 
   /** `unit`: tamaño en unidades 3D de un píxel de arte. */
   constructor(unit = 0.03) {
@@ -161,6 +163,7 @@ export class Cobrador3D extends THREE.Group {
     const sc = 1 + this.pulse * 0.1;
     this.scale.setScalar(sc);
     this.position.set(this.base.x + this.kick.x, this.base.y + this.kick.y, this.base.z + this.pulse * 0.8);
+    if (this.bodyless && this.glitchLeft === 0) for (const k of ['body', 'tend', 'lhand', 'rhand', 'pend', 'chain']) { const m = this.L[k]; if (m) m.visible = false; }
   }
 
   private step(): void {

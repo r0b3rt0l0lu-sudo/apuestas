@@ -15,12 +15,12 @@ describe('tragaperras', () => {
     expect(slots.payoutFor(['llave', 'ojo', 'llave'], 100)).toBe(100);
     expect(slots.payoutFor(['ojo', 'diente', 'llave'], 100)).toBe(0);
   });
-  it('el retorno medio de la tragaperras ronda el 74 %', () => {
+  it('el retorno medio de la tragaperras ronda el 91 %', () => {
     const rng = new Rng(21), n = 200_000;
     let paid = 0;
     for (let i = 0; i < n; i++) paid += slots.spin(rng, 100).payout;
-    expect(paid / (n * 100)).toBeGreaterThan(0.68);
-    expect(paid / (n * 100)).toBeLessThan(0.8);
+    expect(paid / (n * 100)).toBeGreaterThan(0.84);
+    expect(paid / (n * 100)).toBeLessThan(0.98);
   });
   it('frecuencias de símbolos ≈ pesos', () => {
     const rng = new Rng(5), n = 90000, c: Record<string, number> = {};
@@ -58,7 +58,7 @@ describe('ruleta', () => {
   });
   it('el 0 y el 00 pierden las exteriores pero pagan el pleno', () => {
     for (const z of [0, roulette.DOUBLE_ZERO]) {
-      for (const k of roulette.OUTSIDE_KINDS) expect(roulette.payoutFor({ kind: k }, 100, z)).toBe(0);
+      for (const k of roulette.OUTSIDE_KINDS) expect(roulette.payoutFor({ kind: k }, 100, z)).toBe(50); // el cero devuelve la mitad
       expect(roulette.payoutFor({ kind: 'pleno', n: z }, 100, z)).toBe(3600);
     }
   });
@@ -98,13 +98,13 @@ describe('carreras', () => {
     for (let i = 0; i < n; i++) wins[race.run(rng, ['widowFast']).winner]!++;
     p.forEach((q, i) => expect(Math.abs(wins[i]! / n - q)).toBeLessThan(0.01));
   });
-  it('el retorno medio ronda el 92-97 % para cualquier caballo', () => {
+  it('el retorno medio ronda el 96-99 % para cualquier caballo', () => {
     const rng = new Rng(9), n = 60_000;
     for (let pick = 0; pick < 6; pick++) {
       let paid = 0;
       for (let i = 0; i < n; i++) paid += race.run(rng, []).payout(pick, 100);
-      expect(paid / (n * 100)).toBeGreaterThan(0.86);
-      expect(paid / (n * 100)).toBeLessThan(1.04);
+      expect(paid / (n * 100)).toBeGreaterThan(0.9);
+      expect(paid / (n * 100)).toBeLessThan(1.06);
     }
   });
   it('los tiempos son coherentes con el orden de llegada', () => {

@@ -166,14 +166,14 @@ Los costes en acciones obligan a elegir: la tragaperras es barata y de poco ries
 
   | Símbolo | Peso | Tres iguales pagan |
   |---|---|---|
-  | ojo | 5 | ×3 |
-  | diente | 4 | ×5 |
-  | polilla | 3 | ×10 |
-  | llave | 3 | ×15 |
-  | calavera | 2 | ×25 |
-  | siete oxidado | 1 | ×50 |
+  | ojo | 5 | ×5 |
+  | diente | 4 | ×8 |
+  | polilla | 3 | ×15 |
+  | llave | 3 | ×25 |
+  | calavera | 2 | ×40 |
+  | siete oxidado | 1 | ×100 |
 
-- Cualquier pareja (dos símbolos iguales en cualquier posición de la línea): ×1 (te devuelve la apuesta). Con esto el retorno medio es ≈ 74 % (antes solo los pares de ojos devolvían la apuesta: ≈ 44 %).
+- Cualquier pareja (dos símbolos iguales en cualquier posición de la línea): ×1 (te devuelve la apuesta). Con los pagos de arriba el retorno medio es ≈ 91 % (originalmente ≈ 44 %).
 - Animación: los rodillos paran escalonados a los 900, 1400 y 2100 ms.
 - Expresión del Cobrador: `sonrisa` cuando pierdes, `cobra` si te quedan 3 acciones o menos y no llegas a la cuota, `acecho` en el resto de casos.
 
@@ -184,7 +184,7 @@ Los costes en acciones obligan a elegir: la tragaperras es barata y de poco ries
 - Apuestas:
   - Pleno: paga ×36 (incluye lo apostado).
   - Rojo, negro, par, impar, 1–18 y 19–36: pagan ×2.
-  - El 0 pierde todas las apuestas exteriores.
+  - El 0 (y el 00) devuelve la mitad de las apuestas exteriores (regla de la «partage»; el pleno al 0 sigue pagando ×36).
 - Noche 4 en adelante: añadir 00.
 - La rueda gira 4 s con curva `cubic-bezier(.12,.62,.16,1)`. Calcula el ángulo final para que el número ganador quede bajo el puntero (fórmula en el prototipo).
 
@@ -195,15 +195,15 @@ Los costes en acciones obligan a elegir: la tragaperras es barata y de poco ries
 
   | Nº | Nombre | Skin | Paga | Probabilidad de ganar |
   |---|---|---|---|---|
-  | 1 | Ceniza | `clasico` (`#BFB8A8`, crin `#5E5640`) | ×3,3 | 0,29 |
-  | 2 | Óxido | `clasico` (`#A0603A`, crin `#4A2A16`) | ×4,4 | 0,22 |
-  | 3 | Hueso | `esqueleto` | ×5,5 | 0,17 |
-  | 4 | Brasa | `quemado` | ×6,6 | 0,14 |
-  | 5 | Ahogada | `ahogado` | ×8,8 | 0,11 |
-  | 6 | Viuda | `luto` | ×13,2 | 0,07 |
+  | 1 | Ceniza | `clasico` (`#BFB8A8`, crin `#5E5640`) | ×3,4 | 0,29 |
+  | 2 | Óxido | `clasico` (`#A0603A`, crin `#4A2A16`) | ×4,5 | 0,22 |
+  | 3 | Hueso | `esqueleto` | ×5,7 | 0,17 |
+  | 4 | Brasa | `quemado` | ×6,9 | 0,14 |
+  | 5 | Ahogada | `ahogado` | ×9 | 0,11 |
+  | 6 | Viuda | `luto` | ×13,7 | 0,07 |
 
 - **No uses tiempos uniformes:** con ellos todos ganarían igual y las cuotas no tendrían sentido. La probabilidad de cada uno es proporcional a la inversa de su pago.
-  - Con estos pagos (el 10 % más altos que los originales), cada apuesta devuelve de media entre un 92 % y un 97 %, según el caballo. La casa se queda con un margen de ~5 %.
+  - Con estos pagos (≈ 15-20 % más altos que los originales), cada apuesta devuelve de media entre un 96 % y un 99 %, según el caballo. La casa se queda con un margen de ~2 %.
   - Primero se sortea el ganador con esos pesos; después se generan tiempos coherentes con ese orden.
   - Escribe un test que simule 100.000 carreras y compruebe esas frecuencias (±1 %).
 - Cada caballo tiene una curva de velocidad distinta para que haya adelantamientos visibles.
@@ -483,3 +483,5 @@ Desviaciones y decisiones tomadas al implementar; revisar si alguna no encaja:
   - **Más sitios (`r3/hubworld.ts`):** el pasillo tiene ahora cuatro puertas: la **sala de los espejos** (oeste; dos espejos reales con `Reflector` y el Cobrador que solo aparece en el reflejo si miras de frente al espejo del fondo), el **almacén** (este; frascos con ojos, televisor con nieve, gramola, ouija, tragaperras rota con tres sietes y un maniquí que se acerca cuando no lo miras), el **archivo de deudas** (norte; retratos cuyas pupilas te siguen, marco vacío con tu nombre, libro de deudas y la puerta cerrada de Deudores) y la **salida** (sur, sin picaporte). Las paredes son cajas con hueco de puerta y colisión; los espejos clonan la cámara, por eso `Cigarette.clone()` devuelve un grupo vacío.
   - **Decoración y creepy:** velas con llama parpadeante, telarañas, manchas de tinta (sin sangre), máscaras, muñecas que giran la cabeza hacia ti cuando no las miras, neones que fallan, banderines rotos y globos pinchados en el tiovivo, cartas de tarot y candelabros en la ruleta, monedas y banqueta caída en la tragaperras. Sucesos aleatorios cada 22-50 s (susurro con subtítulo, apagón corto —suave con «reducir destellos»—, teléfono que suena, golpes en la pared).
   - **Easter eggs** (`F` en cada uno, textos en `T.eggs`): moneda del almacén (+100 una vez), tragaperras 777 (+77 una vez), ouija, gramola (organillo desafinado), televisor, frascos, maniquí, muñecas, espejo, retratos, marco «TÚ», libro de deudas (usa tu historial), puerta de Deudores, teléfono (tres mensajes), cartel «ÚLTIMA VUELTA», reloj parado, cartas de tarot y la salida.
+  - **Más probabilidades de ganar (a petición del usuario, segunda ronda):** tragaperras con tres iguales ×5/×8/×15/×25/×40/×100 (RTP ≈ 91 %), carreras ×3,4/×4,5/×5,7/×6,9/×9/×13,7 (RTP 96-99 %) y ruleta con «partage» (el 0 devuelve media apuesta exterior). Tests de retorno medio actualizados.
+  - **El Cobrador camina (`r3/cobradorwalker.ts`):** en el pasillo ya no es un sprite plano: tiene cuerpo 3D (levita, pantalones, zapatos y manos de hueso) con piernas y brazos que se balancean y la cabeza-moneda de pixel art (`Cobrador3D` con `bodyless`) siempre de cara a ti. Arranca tras el mostrador, y solo anda cuando tú andas: te rodea sin acercarse a menos de ~3 m, retrocede si le pisas, rodea obstáculos y, si entras en una sala lateral, espera en su puerta.

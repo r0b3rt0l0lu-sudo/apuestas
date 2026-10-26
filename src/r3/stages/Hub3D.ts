@@ -13,7 +13,7 @@ import { openOptions } from '../../ui/dom/options';
 import { showOverlay } from '../../ui/dom/overlay';
 import { Typewriter } from '../../ui/dom/typewriter';
 import { Cigarette } from '../cigarette';
-import { Cobrador3D } from '../cobrador3d';
+import { CobradorWalker } from '../cobradorwalker';
 import { FpsControls, type Solid } from '../fps';
 import { HubWorld, type Spot } from '../hubworld';
 import { engine } from '../engine';
@@ -39,7 +39,8 @@ let saved: { night: number; x: number; z: number; yaw: number; pitch: number } |
 /** Sala de la feria en primera persona: caminas entre las tres mesas y El Cobrador te mira desde el fondo. */
 export class Hub3D extends Stage {
   readonly kind = 'hub';
-  private cobrador!: Cobrador3D;
+  private cobrador!: CobradorWalker;
+  private lastPos = new THREE.Vector3();
   private spinC!: THREE.Group;
   private horses: THREE.Group[] = [];
   private bulbsA!: ReturnType<typeof bulbString>;
@@ -229,12 +230,15 @@ export class Hub3D extends Stage {
   }
 
   private buildCobrador(): void {
-    this.cobrador = new Cobrador3D(0.04).anchor(0, 2.55, -7.9);
+    // arranca tras el mostrador y, cuando te mueves, sale a pasear por la sala con sus piernas
+    this.cobrador = new CobradorWalker(this.solids, { minX: -6.2, maxX: 6.2, minZ: -8.0, maxZ: 6.0 });
+    this.cobrador.position.set(0, 0, -7.9);
     this.cobrador.setMood(session.run.actionsLeft <= 3 && !quotaMet(session.run) ? 'cobra' : 'acecho');
     this.scene.add(this.cobrador);
     const aura = new THREE.PointLight(0x9c3c28, 16, 9, 1.5);
-    aura.position.set(0, 3.2, -6.4);
-    this.scene.add(aura);
+    aura.position.set(0, 3.2, 1.2);
+    this.cobrador.add(aura);
+    this.lastPos.copy(this.pos);
   }
 
   private buildSleep(): void {
@@ -432,14 +436,24 @@ export class Hub3D extends Stage {
     this.lamps.forEach((l, i) => { l.intensity = 20 * this.world.dim * (1 - 0.15 * Math.max(0, Math.sin(t * 9 + i * 3) - 0.8) * 5); });
     const p = engine.pointer;
     this.cobrador.setGaze((p.x - 640) / 500, (p.y - 300) / 300);
-    this.cobrador.update(dt);
     this.tickCig(dt, t);
     if (this.entering) return;
     this.fps.update(dt);
+    this.stepCobrador(dt);
     this.updateNear();
     this.world.update(dt, t, this.pos, this.fps.yaw, this.fps.pitch);
     this.worldLife(dt);
     this.placeLabels();
+  }
+
+  /** El Cobrador camina cuando tú caminas: en el pasillo te rodea y en las salas laterales espera en la puerta. */
+  private stepCobrador(dt: number): void {
+    const moved = Math.hypot(this.pos.x - this.lastPos.x, this.pos.z - this.lastPos.z);
+    this.lastPos.copy(this.pos);
+    const speed = dt > 0 ? Math.min(6, moved / dt) : 0;
+    const room = this.world.roomAt(this.pos.x, this.pos.z);
+    const door = room === 'mirrors' ? { x: -5.4, z: -1.5 } : room === 'storage' ? { x: 5.4, z: 1.8 } : room === 'archive' ? { x: -5.2, z: -7.1 } : null;
+    this.cobrador.step(dt, this.pos, speed, door);
   }
 
   /** Cartel de sala al entrar y sucesos aleatorios: susurros, apagones, teléfono y golpes. */

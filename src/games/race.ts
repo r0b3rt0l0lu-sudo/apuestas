@@ -14,12 +14,12 @@ export interface HorseDef {
 }
 
 export const HORSES: readonly HorseDef[] = [
-  { num: 1, name: 'Ceniza', skin: 'clasico', body: '#BFB8A8', mane: '#5E5640', pays: 3.3, prob: 0.29 },
-  { num: 2, name: 'Óxido', skin: 'clasico', body: '#A0603A', mane: '#4A2A16', pays: 4.4, prob: 0.22 },
-  { num: 3, name: 'Hueso', skin: 'esqueleto', body: '#E8E0C8', mane: '#9C9278', pays: 5.5, prob: 0.17 },
-  { num: 4, name: 'Brasa', skin: 'quemado', body: '#3A302A', mane: '#241C18', pays: 6.6, prob: 0.14 },
-  { num: 5, name: 'Ahogada', skin: 'ahogado', body: '#5E7A72', mane: '#2E4A3A', pays: 8.8, prob: 0.11 },
-  { num: 6, name: 'Viuda', skin: 'luto', body: '#2E2834', mane: '#0D0A0E', pays: 13.2, prob: 0.07 }
+  { num: 1, name: 'Ceniza', skin: 'clasico', body: '#BFB8A8', mane: '#5E5640', pays: 3.4, prob: 0.29 },
+  { num: 2, name: 'Óxido', skin: 'clasico', body: '#A0603A', mane: '#4A2A16', pays: 4.5, prob: 0.22 },
+  { num: 3, name: 'Hueso', skin: 'esqueleto', body: '#E8E0C8', mane: '#9C9278', pays: 5.7, prob: 0.17 },
+  { num: 4, name: 'Brasa', skin: 'quemado', body: '#3A302A', mane: '#241C18', pays: 6.9, prob: 0.14 },
+  { num: 5, name: 'Ahogada', skin: 'ahogado', body: '#5E7A72', mane: '#2E4A3A', pays: 9, prob: 0.11 },
+  { num: 6, name: 'Viuda', skin: 'luto', body: '#2E2834', mane: '#0D0A0E', pays: 13.7, prob: 0.07 }
 ];
 
 /** Probabilidades de victoria; la maldición de la noche 5 favorece a Viuda y castiga a Ceniza. */

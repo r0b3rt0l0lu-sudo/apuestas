@@ -178,7 +178,7 @@ export class Roulette3D extends TableStage {
   }
 
   private reveal(pocket: number, payout: number): void {
-    const r = session.run, lost = payout === 0, c = colorOf(pocket);
+    const r = session.run, half = payout > 0 && payout < this.bet, lost = payout === 0 || half, c = colorOf(pocket);
     this.chip.style.display = 'block';
     this.chip.style.background = PCOL[c];
     this.chip.textContent = labelOf(pocket);
@@ -191,7 +191,7 @@ export class Roulette3D extends TableStage {
       if (payout >= this.bet * 10) this.fx.confetti(new THREE.Vector3(CX, 3, 0), 60);
       this.say(`+${fmt(payout)}  ${phraseFor('roulette', false, r.actionsLeft, r.balance, quotaOfRun(r))}`);
     }
-    if (lost) this.say(phraseFor('roulette', true, r.actionsLeft, r.balance, quotaOfRun(r)));
+    if (lost) this.say(half ? T.roulette.partage(payout) : phraseFor('roulette', true, r.actionsLeft, r.balance, quotaOfRun(r)));
     this.finishPlay();
   }
 

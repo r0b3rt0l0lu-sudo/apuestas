@@ -174,7 +174,8 @@ export const T = {
     bet: 'Ficha',
     kinds: { rojo: 'Rojo', negro: 'Negro', par: 'Par', impar: 'Impar', bajo: '1–18', alto: '19–36' } as Record<string, string>,
     pleno: 'Pleno',
-    plenoHelp: 'Pleno ×36 · exteriores ×2 · el 0 pierde',
+    plenoHelp: 'Pleno ×36 · exteriores ×2 · el 0 devuelve la mitad',
+    partage: (x: number) => `«El cero se queda con la mitad.» Te devuelve ${fmt(x)}.`,
     result: (label: string, color: string) => `Sale el ${label} ${color}`
   },
 

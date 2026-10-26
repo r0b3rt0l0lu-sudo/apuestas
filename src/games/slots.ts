@@ -5,7 +5,7 @@ export const SYMBOLS = ['ojo', 'diente', 'polilla', 'llave', 'calavera', 'siete'
 export type SlotSymbol = (typeof SYMBOLS)[number];
 
 export const WEIGHTS: Record<SlotSymbol, number> = { ojo: 5, diente: 4, polilla: 3, llave: 3, calavera: 2, siete: 1 };
-export const TRIPLE_PAY: Record<SlotSymbol, number> = { ojo: 3, diente: 5, polilla: 10, llave: 15, calavera: 25, siete: 50 };
+export const TRIPLE_PAY: Record<SlotSymbol, number> = { ojo: 5, diente: 8, polilla: 15, llave: 25, calavera: 40, siete: 100 };
 
 export interface SlotResult {
   reels: [SlotSymbol, SlotSymbol, SlotSymbol];
