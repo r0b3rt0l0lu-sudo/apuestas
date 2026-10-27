@@ -10,9 +10,15 @@ export interface Options {
   sfx: number;
   /** Reduce destellos y temblores: los sustituye por fundidos suaves. */
   reduceFlash: boolean;
+  /** Sensibilidad del ratón al mirar (1 = normal). */
+  sensitivity: number;
+  /** Muestra la línea de controles en pantalla. */
+  hints: boolean;
+  /** Muestra el minimapa del pasillo. */
+  minimap: boolean;
 }
 
-export const DEFAULT_OPTIONS: Options = { volume: 0.8, music: 0.7, sfx: 0.9, reduceFlash: false };
+export const DEFAULT_OPTIONS: Options = { volume: 0.8, music: 0.7, sfx: 0.9, reduceFlash: false, sensitivity: 1, hints: true, minimap: true };
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -38,6 +44,7 @@ export function loadRun(s: Store | null = store()): RunState | null {
       debt: data.debt ?? 0,
       mortgaged: data.mortgaged ?? false,
       forgiven: data.forgiven ?? false,
+      stats: data.stats ?? { plays: 0, wins: 0, biggestWin: 0, wagered: 0, returned: 0 },
       plays: data.plays ?? 0,
       peak: data.peak ?? data.balance,
       tolls: data.tolls ?? 0,

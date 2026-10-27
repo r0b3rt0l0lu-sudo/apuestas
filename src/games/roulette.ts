@@ -63,3 +63,9 @@ export function finalAngle(wheel: readonly Pocket[], pocket: Pocket, turns: numb
   const step = (Math.PI * 2) / wheel.length;
   return turns * Math.PI * 2 - i * step;
 }
+
+/** Retorno medio de la ruleta: un pleno, o una apuesta exterior (con la mitad devuelta si sale el 0 / 00). */
+export function rouletteRtp(kind: 'pleno' | 'exterior', doubleZero: boolean): number {
+  const n = doubleZero ? 38 : 37;
+  return kind === 'pleno' ? 36 / n : (18 * 2 + (doubleZero ? 2 : 1) * 0.5) / n;
+}

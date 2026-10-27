@@ -9,6 +9,7 @@ import { canMortgage, quotaMet } from '../../core/state';
 import { T } from '../../i18n/es';
 import { HudDom } from '../../ui/dom/hud';
 import { btn, el } from '../../ui/dom/kit';
+import { openManual } from '../../ui/dom/manual';
 import { openOptions } from '../../ui/dom/options';
 import { showOverlay } from '../../ui/dom/overlay';
 import { Typewriter } from '../../ui/dom/typewriter';
@@ -16,6 +17,7 @@ import { Cigarette } from '../cigarette';
 import { CobradorWalker } from '../cobradorwalker';
 import { FpsControls, type Solid } from '../fps';
 import { HubWorld, type Spot } from '../hubworld';
+import { Minimap } from '../minimap';
 import { engine } from '../engine';
 import { bulbString, box, carousel, cyl, glow, lam, mesh, reelDrum, rouletteTable, slotMachine } from '../models';
 import { goPhase, goTable } from '../router';
@@ -57,6 +59,8 @@ export class Hub3D extends Stage {
   private stations: Station[] = [];
   private fps!: FpsControls;
   private world!: HubWorld;
+  private map!: Minimap;
+  private hintEl!: HTMLElement;
   private nearSpot: Spot | null = null;
   private caption!: HTMLElement;
   private room: string | null = null;
@@ -106,8 +110,12 @@ export class Hub3D extends Stage {
     this.prompt.addEventListener('pointerdown', (e) => { e.stopPropagation(); this.interact(); });
     const hint = el('div', '', T.hub.controls, this.ui);
     Object.assign(hint.style, { position: 'absolute', left: '0', right: '0', top: '92px', textAlign: 'center', fontSize: '22px', color: '#9c9278', textShadow: '2px 2px 0 #000' });
-    const opts = btn(this.ui, T.options, () => openOptions(this.ui), { cls: 'small', style: { position: 'absolute', left: '16px', top: '100px' } });
+    this.hintEl = hint;
+    const opts = btn(this.ui, T.options, () => this.modal((done) => openOptions(this.ui, done)), { cls: 'small', style: { position: 'absolute', left: '16px', top: '100px' } });
     opts.classList.add('hit');
+    const man = btn(this.ui, T.manual.button, () => this.modal((done) => openManual(this.ui, done)), { cls: 'small', style: { position: 'absolute', left: '16px', top: '146px' } });
+    man.classList.add('hit');
+    this.map = new Minimap(this.ui);
     this.caption = el('div', 'title abs center', '', this.ui);
     Object.assign(this.caption.style, { left: '0', right: '0', top: '150px', fontSize: '54px', color: '#ece0c0', opacity: '0', transition: 'opacity .8s', textShadow: '3px 3px 0 #000, 0 0 18px #c24a3a', pointerEvents: 'none' });
     this.buildSleep();
@@ -258,19 +266,28 @@ export class Hub3D extends Stage {
     this.fps.bind();
     this.on(window, 'keydown', ((e: KeyboardEvent) => {
       const k = e.key.toLowerCase();
-      if (k === 'escape') { if (!document.pointerLockElement && this.fps.enabled) openOptions(this.ui); return; }
+      if (k === 'escape') { if (!document.pointerLockElement && this.fps.enabled) this.modal((done) => openOptions(this.ui, done)); return; }
       if (!this.fps.enabled) return;
       const onBtn = e.target instanceof HTMLButtonElement;
       if (onBtn && (k === 'enter' || k === ' ')) return;
       if (k === 'enter' || k === ' ') { e.preventDefault(); if (this.locked) this.advance(); else this.interact(); return; }
       if (k === 'z' && this.sleepBtn && !this.sleepBtn.disabled) { this.sleepBtn.click(); return; }
       if (k === 'e') { if (!e.repeat) this.smoke(); return; }
+      if (k === 'h') { this.modal((done) => openManual(this.ui, done)); return; }
+      if (k === 'm') { session.setOptions({ minimap: !session.options.minimap }); return; }
       if (k === 'f') { e.preventDefault(); this.interact(); return; }
       const idx = ['1', '2', '3', '4'].indexOf(k);
       if (idx === 3) { this.openMortgage(); return; }
       if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); }
     }) as EventListener);
     this.on(this.ui, 'pointerdown', () => { if (!this.tw.skip()) this.waiting?.(); });
+  }
+
+  /** Abre una ventana modal sin que el jugador siga andando por debajo. */
+  private modal(open: (done: () => void) => void): void {
+    if (this.entering || !this.fps.enabled) return;
+    this.fps.setEnabled(false);
+    open(() => this.fps.setEnabled(true));
   }
 
   private smoke(): void {
@@ -443,6 +460,8 @@ export class Hub3D extends Stage {
     this.updateNear();
     this.world.update(dt, t, this.pos, this.fps.yaw, this.fps.pitch);
     this.worldLife(dt);
+    this.hintEl.style.display = session.options.hints ? '' : 'none';
+    this.map.update(dt, this.world.roomAt(this.pos.x, this.pos.z), this.pos.x, this.pos.z, this.fps.yaw, this.cobrador.position.x, this.cobrador.position.z);
     this.placeLabels();
   }
 

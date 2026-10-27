@@ -7,6 +7,7 @@ import { T } from '../i18n/es';
 import { Cobrador3D } from './cobrador3d';
 import type { Solid } from './fps';
 import { box, cyl, glow, lam, mesh, reelDrum, slotMachine } from './models';
+import { cv, px } from './pixel';
 import { stripTexture } from './strip';
 import { canvasTex, tex } from './tex';
 
@@ -14,16 +15,6 @@ const H = 4.8;
 
 /** Cosa que se puede examinar con F (los easter eggs del pasillo). */
 export interface Spot { id: string; x: number; z: number; reach: number; use: () => void }
-
-const cv = (w: number, h: number, draw: (g: CanvasRenderingContext2D) => void): THREE.CanvasTexture => {
-  const c = document.createElement('canvas');
-  c.width = w; c.height = h;
-  const g = c.getContext('2d');
-  if (g) draw(g);
-  return canvasTex(c);
-};
-
-const px = (g: CanvasRenderingContext2D, col: string, x: number, y: number, w = 1, h = 1): void => { g.fillStyle = col; g.fillRect(x, y, w, h); };
 
 /** Retrato antiguo de 24×32: cara pálida con las cuencas vacías (los ojos se añaden aparte, brillantes). */
 function portraitTex(seed: number): THREE.CanvasTexture {

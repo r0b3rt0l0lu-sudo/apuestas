@@ -225,6 +225,28 @@ describe('modo infinito', () => {
   });
 });
 
+describe('estadísticas', () => {
+  const res = (s: RunState, bet: number, payout: number): RunState => apply(s, { type: 'resolve', game: 'slots', bet, payout, rng: s.rng });
+  it('cuentan jugadas, victorias, mayor ganancia y fichas movidas', () => {
+    let s = play(newRun(1));
+    s = res(s, 50, 0);
+    s = res(s, 100, 100); // devolver la apuesta no es ganar
+    s = res(s, 50, 500);
+    expect(s.stats).toEqual({ plays: 3, wins: 1, biggestWin: 450, wagered: 200, returned: 600 });
+    expect(s.peak).toBe(900); // 500 → 450 → 450 → 900 en la campaña también
+  });
+  it('un guardado anterior se carga con las estadísticas a cero', () => {
+    const m = mem();
+    const old: Partial<RunState> = { ...newRun(3) };
+    delete old.stats;
+    m.setItem('ultima-feria.run', JSON.stringify(old));
+    expect(loadRun(m)?.stats).toEqual({ plays: 0, wins: 0, biggestWin: 0, wagered: 0, returned: 0 });
+  });
+  it('las opciones nuevas tienen valores por defecto', () => {
+    expect(DEFAULT_OPTIONS).toMatchObject({ sensitivity: 1, hints: true, minimap: true });
+  });
+});
+
 describe('hallazgos', () => {
   it('dan fichas una sola vez por partida', () => {
     const a = apply(newRun(1), { type: 'find', key: 'egg-coin', chips: 100 });

@@ -17,6 +17,15 @@ export function openOptions(parent: HTMLElement, onClose?: () => void): void {
         const text = () => `${title}: ${Math.round(session.options[key] * 100)} %`;
         const b = btn(col, text(), () => { session.setOptions({ [key]: Math.round(((session.options[key] * 10 + 1) % 11)) / 10 }); setBtnText(b, text()); });
       }
+      const sens = [0.5, 0.75, 1, 1.25, 1.5, 2];
+      const sensText = () => `${T.opt.sensitivity}: ${session.options.sensitivity}×`;
+      const sb = btn(col, sensText(), () => { const i = sens.indexOf(session.options.sensitivity); session.setOptions({ sensitivity: sens[(i + 1) % sens.length] ?? 1 }); setBtnText(sb, sensText()); });
+      const onOff = (key: 'hints' | 'minimap', title: string): void => {
+        const text = () => `${title}: ${session.options[key] ? T.opt.on : T.opt.off}`;
+        const b = btn(col, text(), () => { session.setOptions({ [key]: !session.options[key] }); setBtnText(b, text()); });
+      };
+      onOff('hints', T.opt.hints);
+      onOff('minimap', T.opt.minimap);
       const flash = () => `${T.opt.reduceFlash}: ${session.options.reduceFlash ? T.opt.on : T.opt.off}`;
       const f = btn(col, flash(), () => { session.setOptions({ reduceFlash: !session.options.reduceFlash }); setBtnText(f, flash()); });
     }

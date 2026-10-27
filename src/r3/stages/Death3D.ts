@@ -50,6 +50,8 @@ export class Death3D extends Stage {
     const rank = T.endless.ranks[rankFor(r.peak)] ?? '';
     const newBest = endless && r.peak >= session.best();
     const subLines = endless ? [...T.endless.deathSub, T.endless.score(r.peak, rank), ...(newBest ? [T.endless.newBest] : [])] : [...T.death.sub, T.death.nights(r.night)];
+    const st = r.stats;
+    if (st.plays > 0) subLines.push(T.stats.summary(st.plays, st.wins, st.biggestWin, st.returned - st.wagered));
     const sub = el('div', 'center abs txt', subLines.join('\n'), this.ui);
     Object.assign(sub.style, { left: '0', right: '0', top: '400px', fontSize: '40px', whiteSpace: 'pre-line', opacity: '0' });
     const row = el('div', 'abs hit', '', this.ui);

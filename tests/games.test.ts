@@ -22,6 +22,20 @@ describe('tragaperras', () => {
     expect(paid / (n * 100)).toBeGreaterThan(0.84);
     expect(paid / (n * 100)).toBeLessThan(0.98);
   });
+  it('el retorno exacto coincide con la simulación', () => {
+    const rtp = slots.slotsRtp();
+    expect(rtp).toBeGreaterThan(0.89);
+    expect(rtp).toBeLessThan(0.93);
+    const rng = new Rng(77), n = 300_000;
+    let paid = 0;
+    for (let i = 0; i < n; i++) paid += slots.spin(rng, 100).payout;
+    expect(Math.abs(paid / (n * 100) - rtp)).toBeLessThan(0.02);
+  });
+  it('retorno de la ruleta con partage', () => {
+    expect(roulette.rouletteRtp('pleno', false)).toBeCloseTo(36 / 37, 6);
+    expect(roulette.rouletteRtp('exterior', false)).toBeCloseTo((36 + 0.5) / 37, 6);
+    expect(roulette.rouletteRtp('exterior', true)).toBeCloseTo((36 + 1) / 38, 6);
+  });
   it('frecuencias de símbolos ≈ pesos', () => {
     const rng = new Rng(5), n = 90000, c: Record<string, number> = {};
     for (let i = 0; i < n; i++) for (const s of slots.spin(rng, 50).reels) c[s] = (c[s] ?? 0) + 1;

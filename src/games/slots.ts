@@ -39,3 +39,15 @@ export function moodAfter(lost: boolean, actionsLeft: number, balance: number, q
   if (actionsLeft <= 3 && balance < quota) return 'cobra';
   return lost ? 'sonrisa' : 'acecho';
 }
+
+/** Retorno medio exacto de la tragaperras (suma sobre las 216 combinaciones, ponderadas). */
+export function slotsRtp(): number {
+  const w = SYMBOLS.map((s) => WEIGHTS[s]);
+  const total = w.reduce((a, b) => a + b, 0);
+  let ev = 0;
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) for (let k = 0; k < 6; k++) {
+    const p = ((w[i] ?? 0) * (w[j] ?? 0) * (w[k] ?? 0)) / total ** 3;
+    ev += p * payoutFor([SYMBOLS[i] as SlotSymbol, SYMBOLS[j] as SlotSymbol, SYMBOLS[k] as SlotSymbol], 1);
+  }
+  return ev;
+}

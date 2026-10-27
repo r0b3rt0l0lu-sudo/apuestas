@@ -2,6 +2,7 @@
 import { nightDef } from '../core/nights';
 
 export const fmt = (n: number): string => n.toLocaleString('es-ES');
+const pct = (x: number): string => `${(x * 100).toFixed(0)} %`;
 
 export const T = {
   title: 'LA ÚLTIMA FERIA',
@@ -25,7 +26,7 @@ export const T = {
   no: 'No',
   keysHint: 'Flechas: moverse · Intro/Espacio: elegir · Esc: volver',
 
-  opt: { volume: 'Volumen general', music: 'Música y ambiente', sfx: 'Efectos', reduceFlash: 'Reducir destellos y temblores', on: 'Sí', off: 'No' },
+  opt: { volume: 'Volumen general', music: 'Música y ambiente', sfx: 'Efectos', reduceFlash: 'Reducir destellos y temblores', sensitivity: 'Sensibilidad del ratón', hints: 'Controles en pantalla', minimap: 'Minimapa', on: 'Sí', off: 'No' },
 
   hud: {
     night: 'NOCHE', quota: 'CUOTA', balance: 'SALDO', actions: 'ACCIONES',
@@ -66,7 +67,7 @@ export const T = {
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
     quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
-    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F o Intro: usar · E: fumar · 1, 2, 3: mesas · 4: hipoteca',
+    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F: usar · E: fumar · 1-4: mesas · M: plano · H: manual',
     use: (name: string) => `[F] ${name}`,
     smoke: ['«Fuma. Te queda poco tiempo y mucho humo.»', '«Esa tos no es del tabaco.»', '«Todo se consume, igual que tu cuota.»']
   },
@@ -80,6 +81,119 @@ export const T = {
     hello: '¿Hola?',
     late: '«Llegas tarde.»',
     abducted: ['…', '«Bienvenido a la última feria.»', '«Llegas justo a tiempo para pagar.»']
+  },
+
+  stats: {
+    plays: 'Jugadas',
+    wins: 'Victorias',
+    biggest: 'Mayor ganancia',
+    net: 'Balance',
+    wagered: 'Apostado',
+    returned: 'Cobrado',
+    summary: (plays: number, wins: number, biggest: number, net: number) =>
+      `Jugadas: ${plays} · Victorias: ${wins} · Mayor ganancia: ${fmt(biggest)} · Balance: ${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`
+  },
+
+  manual: {
+    button: 'Manual',
+    title: 'MANUAL DE LA ÚLTIMA FERIA',
+    prev: '‹ Anterior',
+    next: 'Siguiente ›',
+    page: (a: number, b: number) => `Página ${a} de ${b}`,
+    hint: '← → cambian de página · RePág / AvPág o la rueda desplazan',
+    pages: {
+      welcome: {
+        title: 'Bienvenido',
+        lines: [
+          'Despiertas en una feria abandonada. Las luces parpadean, el tiovivo gira solo y alguien te espera tras un mostrador: El Cobrador, una moneda vieja y agrietada con chistera.',
+          'Todo lo que apuestas son fichas ficticias. No hay dinero real, ni compras, ni nada que se pueda canjear.',
+          'Hay dos formas de jugar: la campaña de siete noches y el modo infinito. Las dos se eligen en la pantalla de título.'
+        ]
+      },
+      rules: {
+        title: 'Cómo se gana',
+        lines: [
+          'CAMPAÑA. Cada noche El Cobrador fija una cuota de fichas y te da un número limitado de acciones. Reúne la cuota con las tres mesas y espera al amanecer: la cuota se descuenta del saldo y lo que sobra pasa a la noche siguiente.',
+          'Si te quedas sin acciones o sin fichas para apostar y no llegas, se abre la puerta de Deudores: un duelo a muerte. Si lo ganas, la deuda se perdona. Si lo pierdes, mueres y empiezas de cero.',
+          'Ganas la campaña superando la noche 7 (cuota de 50.000).',
+          'MODO INFINITO. Empiezas con 1.000 fichas, sin noches ni cuota. Juega todo lo que quieras, pero la casa cobra cada 10 jugadas. Pierdes cuando no te llega para la apuesta mínima. Ganas rompiendo la banca: 100.000 fichas.'
+        ]
+      },
+      controls: {
+        title: 'Controles',
+        rows: [
+          ['W A S D / flechas ↑ ↓', 'Andar por el pasillo'],
+          ['Flechas ← →', 'Girar'],
+          ['Clic en la escena', 'Capturar el ratón para mirar (Esc lo suelta)'],
+          ['F · Intro · Espacio', 'Usar / entrar en una mesa / examinar'],
+          ['1 · 2 · 3 · 4', 'Ir directo a tragaperras, ruleta, carreras y hipoteca'],
+          ['E', 'Fumar un cigarro'],
+          ['Z', 'Esperar al amanecer (con la cuota cubierta)'],
+          ['M · H · Esc', 'Minimapa · este manual · opciones'],
+          ['En las mesas: Espacio', 'Jugar o repetir la última apuesta'],
+          ['En las mesas: Esc', 'Volver al pasillo'],
+          ['En el duelo: A / S', 'Disparar a El Cobrador / dispararte'],
+          ['En el duelo: 1 – 5', 'Usar un objeto']
+        ]
+      },
+      tables: { title: 'Las mesas' },
+      duel: {
+        title: 'El duelo',
+        lines: [
+          'Cada uno tiene 4 velas. Se cargan entre 3 y 8 cartuchos, reales y de fogueo, y al principio ves cuántos hay de cada. Después se ocultan.',
+          'En tu turno disparas a El Cobrador o a ti mismo. Si te disparas y era de fogueo, repites turno. Un cartucho real quita una vela (dos con pólvora).',
+          'OBJETOS. Monóculo: ves el cartucho cargado. Moneda trucada: lo invierte. Vela: recuperas una. Reloj de arena: el rival pierde su turno. Pólvora: el siguiente disparo hace doble daño.',
+          'Cuenta los cartuchos y úsalos a tu favor: si quedan más reales que de fogueo, dispara a El Cobrador; si quedan más de fogueo, dispararte es gratis.'
+        ]
+      },
+      money: {
+        title: 'Hipoteca y la casa',
+        lines: [
+          'HIPOTECA (campaña). En el mostrador de El Cobrador puedes pedir fichas una vez por noche: el 20 %, 40 % o 60 % de la cuota. A cambio, esa cantidad más un 30 % se suma a la cuota de esa noche. Si ganas el duelo, la deuda se perdona.',
+          'Sirve para jugar con más fichas, no para ganarlas gratis: tendrás que reunir más para llegar al amanecer.',
+          'COBRO DE LA CASA (infinito). Cada 10 jugadas se lleva un porcentaje de tu saldo: 10 % el primero, 2 % más con cada cobro, hasta un 35 % (mínimo 50 fichas). La barra de arriba te dice cuántas jugadas faltan.',
+          'RANGOS. Según tu saldo máximo: Novato, Jugador (2.500), Tiburón (10.000), Leyenda (40.000) y Rompebancas (100.000).'
+        ]
+      },
+      hall: {
+        title: 'El pasillo',
+        lines: [
+          'El pasillo no es solo el sitio donde se apuesta. Tiene salas que explorar: una al oeste, otra al este, una puerta al norte y una salida al sur.',
+          'Pulsa M para ver el minimapa: las salas se dibujan cuando las visitas. Pulsa F ante cualquier cosa rara para examinarla.',
+          'Algunas cosas dan fichas, otras solo miedo. Y El Cobrador te vigila: se mueve cuando tú te mueves.',
+          'Con «Reducir destellos y temblores» (Opciones) los sustos y apagones se suavizan.'
+        ]
+      },
+      tips: { title: 'Consejos' },
+      run: { title: 'Tu partida' }
+    },
+    tables: {
+      slots: 'TRAGAPERRAS · 1 acción · apuestas 50 / 100 / 250. Tres símbolos iguales en la línea central pagan según la tabla; dos iguales cualquiera devuelven la apuesta.',
+      slotsCols: ['Símbolo', 'Peso', 'Tres iguales'],
+      roulette: 'RULETA · 2 acciones · fichas 50 / 100 / 250 / 500. Pleno ×36; rojo, negro, par, impar, 1-18 y 19-36 ×2. El 0 devuelve la mitad de las exteriores. Desde la noche 4 hay también un 00.',
+      race: 'CARRERAS · 3 acciones · apuestas 100 / 250 / 500. Elige un caballito: cuanto más improbable, más paga.',
+      raceCols: ['Caballito', 'Paga', 'Gana'],
+      rtp: (slots: number, rouletteExt: number, raceLo: number, raceHi: number) =>
+        `Retorno medio: tragaperras ${pct(slots)} · ruleta ${pct(rouletteExt)} (exteriores) · carreras ${pct(raceLo)}–${pct(raceHi)}.`
+    },
+    tips: [
+      'La tragaperras es la mesa más barata: una acción por jugada. Úsala para ir sumando sin gastar acciones.',
+      'Las carreras cuestan tres acciones, pero un caballito de pago alto puede arreglarte la noche de golpe.',
+      'La ruleta es casi justa. Apostar a rojo o negro es lo más seguro; un pleno es una lotería.',
+      'Antes de pedir una hipoteca, calcula si te llega con las acciones que quedan: es dinero para jugar, no regalado.',
+      'En el duelo, cuenta los cartuchos reales y de fogueo que quedan. Casi todo se decide ahí.',
+      'No te quedes siempre en el pasillo: hay fichas escondidas por las salas.',
+      'Si ves que no llegas a la cuota, la hipoteca y el duelo son tus salidas. Piensa cuál te conviene.'
+    ],
+    run: {
+      empty: 'Todavía no has jugado ninguna ronda.',
+      mode: (m: string) => `Modo: ${m}`,
+      campaign: 'campaña',
+      endless: 'infinito',
+      night: (n: number) => `Noche ${n} de 7`,
+      peak: (n: number) => `Saldo máximo: ${fmt(n)}`,
+      best: (n: number) => `Récord del modo infinito: ${fmt(n)}`
+    }
   },
 
   eggs: {

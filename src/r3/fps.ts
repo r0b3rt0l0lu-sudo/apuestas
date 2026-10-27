@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { session } from '../core/session';
 
 export interface Solid { x: number; z: number; hx: number; hz: number }
 export interface FpsBounds { minX: number; maxX: number; minZ: number; maxZ: number }
@@ -34,8 +35,9 @@ export class FpsControls {
 
   bind(): void {
     const look = (dx: number, dy: number): void => {
-      this.yaw -= dx * 0.0035;
-      this.pitch = Math.max(-0.7, Math.min(0.7, this.pitch - dy * 0.0035));
+      const k = 0.0035 * session.options.sensitivity;
+      this.yaw -= dx * k;
+      this.pitch = Math.max(-0.7, Math.min(0.7, this.pitch - dy * k));
     };
     this.on('pointermove', (e) => {
       if (!this.enabled) return;

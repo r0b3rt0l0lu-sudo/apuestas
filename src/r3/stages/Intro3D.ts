@@ -76,6 +76,7 @@ export class Intro3D extends Stage {
     this.goal = goal;
     const hint = el('div', 'abs txt', T.intro.controls, this.ui);
     this.hint = hint;
+    hint.style.display = session.options.hints ? '' : 'none';
     Object.assign(hint.style, { left: '0', right: '0', top: '24px', textAlign: 'center', fontSize: '22px', color: '#9c9278', textShadow: '2px 2px 0 #000' });
     const dlg = el('div', 'dlg frame dialog hit', '', this.ui);
     Object.assign(dlg.style, { opacity: '0', transition: 'opacity .3s' });

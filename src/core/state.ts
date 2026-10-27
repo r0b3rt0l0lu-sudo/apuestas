@@ -14,6 +14,19 @@ export interface NightResult {
 
 export type Mode = 'campaign' | 'endless';
 
+/** Estadísticas de la partida: para el resumen al morir y el manual. */
+export interface RunStats {
+  plays: number;
+  /** Jugadas en las que cobraste más de lo apostado. */
+  wins: number;
+  /** Mayor ganancia neta en una jugada. */
+  biggestWin: number;
+  wagered: number;
+  returned: number;
+}
+
+export const emptyStats = (): RunStats => ({ plays: 0, wins: 0, biggestWin: 0, wagered: 0, returned: 0 });
+
 export interface RunState {
   version: 1;
   /** Campaña de 7 noches o modo infinito. */
@@ -32,6 +45,8 @@ export interface RunState {
   debt: number;
   /** Ya se pidió la hipoteca de esta noche (solo una por noche). */
   mortgaged: boolean;
+  /** Estadísticas de toda la partida. */
+  stats: RunStats;
   /** Modo infinito: jugadas resueltas, saldo máximo alcanzado, cobros de la casa y el último importe. */
   plays: number;
   peak: number;
@@ -70,6 +85,7 @@ export function newRun(seed: number, mode: Mode = 'campaign'): RunState {
     forgiven: false,
     debt: 0,
     mortgaged: false,
+    stats: emptyStats(),
     plays: 0,
     peak: start,
     tolls: 0,
@@ -124,7 +140,15 @@ export function apply(s: RunState, a: Action): RunState {
         ...s,
         rng: a.rng,
         balance: s.balance - a.bet + Math.max(0, a.payout),
-        actionsLeft: s.actionsLeft - TABLES[a.game].cost
+        actionsLeft: s.actionsLeft - TABLES[a.game].cost,
+        peak: Math.max(s.peak, s.balance - a.bet + Math.max(0, a.payout)),
+        stats: {
+          plays: s.stats.plays + 1,
+          wins: s.stats.wins + (a.payout > a.bet ? 1 : 0),
+          biggestWin: Math.max(s.stats.biggestWin, a.payout - a.bet),
+          wagered: s.stats.wagered + a.bet,
+          returned: s.stats.returned + Math.max(0, a.payout)
+        }
       };
       return settle(s.mode === 'endless' ? endlessTurn(played) : played);
     }

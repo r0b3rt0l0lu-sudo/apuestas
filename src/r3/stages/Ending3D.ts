@@ -34,7 +34,9 @@ export class Ending3D extends Stage {
     Object.assign(t.style, { left: '0', right: '0', top: '40px', fontSize: '84px', color: '#ece0c0' });
     const pan = el('div', 'abs frame panel center', '', this.ui);
     Object.assign(pan.style, { left: '260px', top: '170px', width: '760px', fontSize: '36px', color: '#ece0c0', padding: '6px 14px 12px', lineHeight: '1.15' });
-    (endless ? [...T.endless.winLines, T.endless.score(session.run.peak, T.endless.ranks.banca ?? '')] : T.ending.lines).forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
+    const stt = session.run.stats;
+    const extra = stt.plays > 0 ? [T.stats.summary(stt.plays, stt.wins, stt.biggestWin, stt.returned - stt.wagered)] : [];
+    [...(endless ? [...T.endless.winLines, T.endless.score(session.run.peak, T.endless.ranks.banca ?? '')] : T.ending.lines), ...extra].forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
     const row = el('div', 'abs hit', '', this.ui);
     Object.assign(row.style, { left: '380px', top: '690px', width: '520px' });
     btn(row, endless ? T.endless.again : T.ending.again, () => { session.startNew(undefined, endless ? 'endless' : 'campaign'); goPhase(); }, { cls: 'big', style: { width: '100%' } });
