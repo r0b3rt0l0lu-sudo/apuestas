@@ -6,7 +6,7 @@ import { attachNav, btn, el } from '../../ui/dom/kit';
 import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
 import { Fx3D } from '../fx3d';
-import { goPhase } from '../router';
+import { goPhase, goTitle } from '../router';
 import { Stage } from '../stage';
 import { dawnWorld } from './Dawn3D';
 
@@ -30,16 +30,17 @@ export class Ending3D extends Stage {
     this.camera.position.set(0, 1.8, 7.5);
     this.camera.lookAt(0, 2.2, -10);
     const endless = session.run.mode === 'endless';
-    const t = el('div', 'title center abs', endless ? T.endless.winTitle : T.ending.title, this.ui);
+    const escaped = !!session.run.flags.escaped;
+    const t = el('div', 'title center abs', escaped ? T.secret.endTitle : endless ? T.endless.winTitle : T.ending.title, this.ui);
     Object.assign(t.style, { left: '0', right: '0', top: '40px', fontSize: '84px', color: '#ece0c0' });
     const pan = el('div', 'abs frame panel center', '', this.ui);
     Object.assign(pan.style, { left: '260px', top: '170px', width: '760px', fontSize: '36px', color: '#ece0c0', padding: '6px 14px 12px', lineHeight: '1.15' });
     const stt = session.run.stats;
     const extra = stt.plays > 0 ? [T.stats.summary(stt.plays, stt.wins, stt.biggestWin, stt.returned - stt.wagered)] : [];
-    [...(endless ? [...T.endless.winLines, T.endless.score(session.run.peak, T.endless.ranks.banca ?? '')] : T.ending.lines), ...extra].forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
+    [...(escaped ? T.secret.endLines : endless ? [...T.endless.winLines, T.endless.score(session.run.peak, T.endless.ranks.banca ?? '')] : T.ending.lines), ...extra].forEach((l) => { const p = el('p', '', l, pan); p.style.margin = '8px 0'; });
     const row = el('div', 'abs hit', '', this.ui);
     Object.assign(row.style, { left: '380px', top: '690px', width: '520px' });
-    btn(row, endless ? T.endless.again : T.ending.again, () => { session.startNew(undefined, endless ? 'endless' : 'campaign'); goPhase(); }, { cls: 'big', style: { width: '100%' } });
+    btn(row, escaped ? T.secret.endAgain : endless ? T.endless.again : T.ending.again, () => { if (escaped) { goTitle(); return; } session.startNew(undefined, endless ? 'endless' : 'campaign'); goPhase(); }, { cls: 'big', style: { width: '100%' } });
     this.detach = attachNav(this.ui);
   }
 

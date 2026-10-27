@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { drawArena } from '../../art/scenery';
-import { drawHorse, drawPole } from '../../art/horse';
+import { drawHorse } from '../../art/horse';
 import { sfx } from '../../audio/sfx';
 import { cursesFor } from '../../core/nights';
 import { quotaOfRun, session } from '../../core/session';
@@ -79,19 +79,17 @@ export class Race3D extends TableStage {
     floor.rotation.x = -Math.PI / 2; floor.position.y = -0.02;
     sc.add(floor);
 
-    // caballitos con su barra
+    // caballos de carreras (sin barra)
     for (let i = 0; i < 6; i++) {
       const h = HORSES[i]!;
       const g = new THREE.Group();
       const look = { skin: h.skin, body: h.body, mane: h.mane, num: h.num };
       const body = new THREE.Mesh(new THREE.PlaneGeometry(48 * PX, 40 * PX), spriteMat(canvasTex(drawHorse(look, 0).canvas)));
       body.position.y = 1.15;
-      const pole = new THREE.Mesh(new THREE.PlaneGeometry(48 * PX, 40 * PX), spriteMat(canvasTex(drawPole().canvas)));
-      pole.position.set(0, 1.15, 0.02);
       const shadow = new THREE.Mesh(new THREE.CircleGeometry(0.9, 12), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.4 }));
       shadow.rotation.x = -Math.PI / 2; shadow.position.set(0, 0.03, 0.05);
       shadow.scale.set(1, 0.35, 1);
-      g.add(body, pole, shadow);
+      g.add(body, shadow);
       g.position.set(X0, 0, laneZ(i));
       sc.add(g);
       this.horses.push({ g, body, shadow, i });
@@ -122,7 +120,7 @@ export class Race3D extends TableStage {
     this.goBtn = btn(row, T.race.go, () => this.start(), { cls: 'big', hotkey: 'space', style: { width: '320px', marginLeft: '24px' } });
     this.actions.push(this.goBtn);
     this.refreshPick();
-    this.say(T.night.intro(session.run.night));
+    this.say(T.night.intro(session.run.night, session.run.difficulty));
     queueMicrotask(() => this.goBtn.focus());
   }
 

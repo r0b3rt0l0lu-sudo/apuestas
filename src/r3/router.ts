@@ -5,6 +5,7 @@ import { Dawn3D } from './stages/Dawn3D';
 import { Death3D } from './stages/Death3D';
 import { Duel3D } from './stages/Duel3D';
 import { Ending3D } from './stages/Ending3D';
+import { Blackjack3D } from './stages/Blackjack3D';
 import { Hub3D } from './stages/Hub3D';
 import { Intro3D, needsIntro } from './stages/Intro3D';
 import { Race3D } from './stages/Race3D';
@@ -24,7 +25,7 @@ export function goPhase(): void {
 }
 
 export function goTable(g: Game): void {
-  void engine.go(() => (g === 'slots' ? new Slots3D() : g === 'roulette' ? new Roulette3D() : new Race3D()));
+  void engine.go(() => (g === 'slots' ? new Slots3D() : g === 'roulette' ? new Roulette3D() : g === 'blackjack' ? new Blackjack3D() : new Race3D()));
 }
 
 export function goTitle(): void {

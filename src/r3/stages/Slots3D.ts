@@ -110,7 +110,7 @@ export class Slots3D extends TableStage {
     this.betRow(row, 120);
     this.pull = btn(row, T.slots.pull, () => this.pullLever(), { cls: 'big', hotkey: 'space', style: { width: '380px', marginLeft: '24px' } });
     this.actions.push(this.pull);
-    this.say(T.night.intro(session.run.night));
+    this.say(T.night.intro(session.run.night, session.run.difficulty));
     this.click(m.lever, () => this.pullLever(), { enabled: () => !this.busy && this.affordable(), hover: () => undefined });
     queueMicrotask(() => this.pull.focus());
     void drawCandle;

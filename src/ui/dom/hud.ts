@@ -1,5 +1,5 @@
 import { sfx } from '../../audio/sfx';
-import { ENDLESS, nightDef } from '../../core/nights';
+import { ENDLESS, actionsFor } from '../../core/nights';
 import { quotaOfRun, session } from '../../core/session';
 import { T, fmt } from '../../i18n/es';
 import { el, urls } from './kit';
@@ -61,7 +61,7 @@ export class HudDom {
 
   refresh(): void {
     if (this.frozen) return;
-    const r = session.run, q = quotaOfRun(r), d = nightDef(r.night);
+    const r = session.run, q = quotaOfRun(r), nActs = actionsFor(r.night, r.difficulty);
     const endless = r.mode === 'endless';
     this.night.textContent = endless ? `${T.hud.endless} · ${T.hud.peak} ${fmt(r.peak)}` : `${T.hud.night} ${r.night}/7`;
     this.quota.textContent = endless ? T.hud.toll(ENDLESS.tollEvery - (r.plays % ENDLESS.tollEvery)) : `${T.hud.quota} ${fmt(q)}`;
@@ -92,7 +92,7 @@ export class HudDom {
     }
     // velas: la que se acaba de gastar se apaga con un parpadeo
     this.ticks.textContent = '';
-    for (let i = 0; i < (endless ? 0 : d.actions); i++) {
+    for (let i = 0; i < (endless ? 0 : nActs); i++) {
       const on = i < r.actionsLeft;
       const im = el('img', on ? '' : i === r.actionsLeft && this.lastActions > r.actionsLeft ? 'snuff' : '', '', this.ticks) as HTMLImageElement;
       im.src = (on ? urls.tickOn : urls.tickOff) as string;

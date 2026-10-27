@@ -27,9 +27,9 @@ class Session {
     return true;
   }
 
-  startNew(seed: number = freshSeed(), mode: 'campaign' | 'endless' = 'campaign'): void {
+  startNew(seed: number = freshSeed(), mode: 'campaign' | 'endless' = 'campaign', difficulty: 'easy' | 'normal' | 'hard' = this.options.difficulty): void {
     clearRun();
-    this.run = newRun(seed, mode);
+    this.run = newRun(seed, mode, difficulty);
     saveRun(this.run);
     this.emit();
   }

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { sfx } from '../../audio/sfx';
 import { drawWheel } from '../../art/wheel';
-import { curtainTex, woodTex } from '../../art/tex3d';
+import { curtainTex, feltTex, woodTex } from '../../art/tex3d';
 import { GAMES, type Game, TABLES, canPlay, minBet } from '../../core/economy';
 import { mortgageOffers, rankFor, tollFor } from '../../core/nights';
 import { session } from '../../core/session';
@@ -18,6 +18,7 @@ import { CobradorWalker } from '../cobradorwalker';
 import { FpsControls, type Solid } from '../fps';
 import { HubWorld, type Spot } from '../hubworld';
 import { Minimap } from '../minimap';
+import { cardTex } from '../cards';
 import { engine } from '../engine';
 import { bulbString, box, carousel, cyl, glow, lam, mesh, reelDrum, rouletteTable, slotMachine } from '../models';
 import { goPhase, goTable } from '../router';
@@ -87,7 +88,7 @@ export class Hub3D extends Stage {
     sc.add(new THREE.AmbientLight(0x4a3858, 1.9));
     this.buildRoom();
     this.buildStations();
-    this.world = new HubWorld(this.scene, this.solids, (text, whisper) => { void this.tw.say(text, whisper); });
+    this.world = new HubWorld(this.scene, this.solids, (text, whisper) => { void this.tw.say(text, whisper); }, () => this.openSecret());
     this.world.build();
     this.buildCobrador();
 
@@ -205,11 +206,22 @@ export class Hub3D extends Stage {
       this.horses.push(hs);
     }
     const cSolid = { x: 4.4, z: -3.4, hx: 2.05, hz: 2.05 };
-    this.solids.push(sSolid, rSolid, cSolid);
+    // mesa de blackjack con el tapete, cartas repartidas y fichas, junto a la puerta del almacén
+    const bjSolid = { x: 2.2, z: 4.4, hx: 1.5, hz: 1.0 };
+    box(3.0, 0.9, 2.0, lam(0x3a1810, tex('hub-bj-wood', () => woodTex('#3a1810'), [2, 1])), 2.2, 0.45, 4.4, sc);
+    const bjFelt = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.8), lam(0xffffff, tex('hub-bj-felt', () => feltTex('#2a5a3a'), [2, 1])));
+    bjFelt.rotation.x = -Math.PI / 2; bjFelt.position.set(2.2, 0.91, 4.4); sc.add(bjFelt);
+    ([[1.6, 4.2, 0.2, 7, 0], [2.05, 4.15, -0.1, 12, 2], [2.8, 4.7, 0.3, 1, 3]] as const).forEach(([x, z, r, rank, suit]) => {
+      const cm = new THREE.Mesh(new THREE.PlaneGeometry(0.34, 0.45), new THREE.MeshLambertMaterial({ map: cardTex({ rank, suit }), emissive: 0x302820, emissiveMap: cardTex({ rank, suit }) }));
+      cm.rotation.set(-Math.PI / 2, 0, r); cm.position.set(x, 0.92, z); sc.add(cm);
+    });
+    for (let i = 0; i < 4; i++) cyl(0.08, 0.08, 0.03, lam([0x7a1e1e, 0x3a4226, 0xc4b494, 0x7a1e1e][i] ?? 0x7a1e1e), 3.2, 0.93 + i * 0.032, 4.9, sc, 8);
+    this.solids.push(sSolid, rSolid, cSolid, bjSolid);
     this.stations = [
       { game: 'slots', solid: sSolid, cam: new THREE.Vector3(-3.6, 1.75, 1.0), look: new THREE.Vector3(-5.9, 1.6, 1.0), label: new THREE.Vector3(-5.9, 3.4, 1.0) },
       { game: 'roulette', solid: rSolid, cam: new THREE.Vector3(-1.6, 2.7, -1.3), look: new THREE.Vector3(-2.1, 1, -4.0), label: new THREE.Vector3(-1.1, 2.4, -4.0) },
       { game: 'race', solid: cSolid, cam: new THREE.Vector3(4.4, 2.0, -0.3), look: new THREE.Vector3(4.4, 1.7, -3.4), label: new THREE.Vector3(4.4, 4.6, -3.4) },
+      { game: 'blackjack', solid: bjSolid, cam: new THREE.Vector3(2.2, 2.5, 1.7), look: new THREE.Vector3(2.2, 0.95, 4.4), label: new THREE.Vector3(2.2, 2.2, 4.4) },
       { game: 'mortgage', solid: this.deskSolid, cam: new THREE.Vector3(0, 1.8, -5.0), look: new THREE.Vector3(0, 1.9, -7.5), label: new THREE.Vector3(0, 1.45, -6.7) }
     ];
     const spot = new THREE.PointLight(0xe8b868, 14, 9, 1.5);
@@ -217,7 +229,7 @@ export class Hub3D extends Stage {
     sc.add(spot);
     this.stations.forEach((s, i) => {
       const obj = [slot.group, rt.group, car.group][i];
-      if (!obj) return;
+      if (!obj) return; // blackjack y mostrador se usan con F
       this.click(obj, () => { if (this.near === s) this.interact(); }, { enabled: () => !this.entering && this.near === s });
     });
   }
@@ -276,8 +288,8 @@ export class Hub3D extends Stage {
       if (k === 'h') { this.modal((done) => openManual(this.ui, done)); return; }
       if (k === 'm') { session.setOptions({ minimap: !session.options.minimap }); return; }
       if (k === 'f') { e.preventDefault(); this.interact(); return; }
-      const idx = ['1', '2', '3', '4'].indexOf(k);
-      if (idx === 3) { this.openMortgage(); return; }
+      const idx = ['1', '2', '3', '4', '5'].indexOf(k);
+      if (idx === 4) { this.openMortgage(); return; }
       if (idx >= 0) { const g = GAMES[idx]; if (g) void this.enter(g); }
     }) as EventListener);
     this.on(this.ui, 'pointerdown', () => { if (!this.tw.skip()) this.waiting?.(); });
@@ -358,12 +370,23 @@ export class Hub3D extends Stage {
     else void this.enter(this.near.game);
   }
 
+  /** La puerta de Deudores de la cuarta noche: con la llave, el nombre y la firma se abre el duelo secreto. */
+  private openSecret(): void {
+    if (this.entering || !this.fps.enabled) return;
+    this.fps.setEnabled(false);
+    const close = (): void => { ov.close(); this.fps.setEnabled(true); };
+    const ov = showOverlay(this.ui, T.secret.title, T.secret.body, [
+      { text: T.secret.open, onClick: () => { close(); session.dispatch({ type: 'startSecret' }); this.entering = true; sfx.shot(); goPhase(); } },
+      { text: T.secret.cancel, onClick: close }
+    ], { w: 900, onBack: close });
+  }
+
   /** El Cobrador te adelanta fichas a cambio de sumar lo prestado, con interés, a la cuota de esta noche. */
   private openMortgage(): void {
     const r = session.run;
     if (this.entering || !this.fps.enabled) return;
     if (r.mode === 'endless') {
-      const next = tollFor(r.tolls, r.balance);
+      const next = tollFor(r.tolls, r.balance, r.difficulty);
       void this.tw.say(T.endless.desk(r.peak, Math.max(session.best(), r.peak), T.endless.ranks[rankFor(r.peak)] ?? '', r.plays, next), true);
       return;
     }
@@ -371,7 +394,7 @@ export class Hub3D extends Stage {
     this.fps.setEnabled(false);
     const close = (): void => { ov.close(); this.fps.setEnabled(true); };
     const ov = showOverlay(this.ui, T.mortgage.title, T.mortgage.body, [
-      ...mortgageOffers(r.night).map((o) => ({
+      ...mortgageOffers(r.night, r.difficulty).map((o) => ({
         text: T.mortgage.option(o.amount, o.owed),
         onClick: () => {
           close();
@@ -399,7 +422,7 @@ export class Hub3D extends Stage {
       return;
     }
     const key = `intro-${r.night}`;
-    if (r.flags[key]) { await this.tw.say(quotaMet(r) ? T.hub.quotaMet : T.night.intro(r.night), true); return; }
+    if (r.flags[key]) { await this.tw.say(quotaMet(r) ? T.hub.quotaMet : T.night.intro(r.night, r.difficulty), true); return; }
     // el diálogo avanza solo (Intro lo acelera) y nunca impide moverse ni entrar en una mesa
     this.locked = true;
     session.dispatch({ type: 'flag', key });
@@ -411,9 +434,10 @@ export class Hub3D extends Stage {
       session.dispatch({ type: 'flag', key: 'tutorial' });
       for (const line of T.tutorial) { await this.tw.say(line, true); await adv(); }
     }
-    await this.tw.say(T.night.intro(r.night), true);
+    await this.tw.say(T.night.intro(r.night, r.difficulty), true);
     const curse = T.night.curseLine(r.night);
     if (curse) { await adv(); this.cobrador.setMood('sonrisa'); await this.tw.say(`«${curse}»`, true); }
+    if (r.night === 4) { await adv(); await this.tw.say(T.secret.nightHint, true); }
     this.locked = false;
   }
 

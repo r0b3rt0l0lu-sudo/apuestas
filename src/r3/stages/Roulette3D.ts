@@ -107,7 +107,7 @@ export class Roulette3D extends TableStage {
     this.actions.push(this.spinBtn);
     this.pickKind('rojo');
     this.placeBall();
-    this.say(T.night.intro(session.run.night));
+    this.say(T.night.intro(session.run.night, session.run.difficulty));
     queueMicrotask(() => this.spinBtn.focus());
   }
 

@@ -3,6 +3,7 @@ import { Reflector } from 'three/examples/jsm/objects/Reflector.js';
 import { sfx } from '../audio/sfx';
 import { brickTex, metalTex, woodTex } from '../art/tex3d';
 import { session } from '../core/session';
+import { secretReady } from '../core/state';
 import { T } from '../i18n/es';
 import { Cobrador3D } from './cobrador3d';
 import type { Solid } from './fps';
@@ -79,7 +80,17 @@ export class HubWorld {
   private ringT = 0;
   private counts: Record<string, number> = {};
 
-  constructor(private scene: THREE.Scene, private solids: Solid[], private say: (text: string, whisper?: boolean) => void) {}
+  constructor(private scene: THREE.Scene, private solids: Solid[], private say: (text: string, whisper?: boolean) => void, private openSecret: () => void = () => undefined) {}
+
+  /** La cuarta noche de la campaña esconde una salida: llave, nombre y firma abren la puerta de Deudores. */
+  private night4(): boolean {
+    return session.run.mode === 'campaign' && session.run.night === 4;
+  }
+
+  private clue(key: string): void {
+    session.dispatch({ type: 'flag', key });
+    sfx.prize();
+  }
 
   // ---------- utilidades ----------
 
@@ -324,7 +335,7 @@ export class HubWorld {
     this.cobweb(6.5, 4.3, 6.2, -Math.PI / 2, 1.3); this.cobweb(-6.5, 4.3, -8.2, Math.PI / 2, 1.2);
     this.mask(2.2, 3.3, 6.3, Math.PI); this.mask(-2.4, 3.1, 6.3, Math.PI);
     // muñecas colgadas del techo, quietas a menos que mires de reojo
-    for (const x of [-2.6, 2.8]) { cyl(0.004, 0.004, 1.6, lam(0x1c100c), x, 4.0, 3.5, sc, 3); this.doll(x, 2.55, 3.5); }
+    for (const x of [-2.6, 5.2]) { cyl(0.004, 0.004, 1.6, lam(0x1c100c), x, 4.0, 2.4, sc, 3); this.doll(x, 2.55, 2.4); }
   }
 
   // ---------- sala de los espejos (oeste) ----------
@@ -356,6 +367,12 @@ export class HubWorld {
     for (const x of [-14.5, -8.5]) { cyl(0.05, 0.08, 1.4, lam(0xc4a050), x, 0.7, -3.6, sc, 6); [-0.2, 0, 0.2].forEach((o) => this.candle(x + o, 1.4, -3.6)); }
     box(1.6, 0.8, 0.6, lam(0x3a2418), -14.8, 0.4, 0.6, sc); this.solids.push({ x: -14.8, z: 0.6, hx: 0.9, hz: 0.4 });
     this.doll(-14.8, 0.8, 0.6); this.doll(-14.3, 0.8, 0.6);
+    this.spot('vanity', -14.2, 1.1, 1.3, () => {
+      if (!this.night4()) { this.say(T.secret.vanity, true); return; }
+      if (session.run.flags['clue-key']) { this.say(T.secret.vanityDone, true); return; }
+      this.clue('clue-key');
+      this.say(T.secret.vanityKey, true);
+    });
     // sábana sobre un mueble, telarañas y manchas
     const sheet = box(1.2, 1.3, 0.9, lam(0xb8b0a0, null, { emissive: 0x1c1a16 }), -9.6, 0.65, -3.4, sc); sheet.rotation.y = 0.2;
     this.solids.push({ x: -9.6, z: -3.4, hx: 0.7, hz: 0.6 });
@@ -417,7 +434,15 @@ export class HubWorld {
     board.rotation.x = -Math.PI / 2; board.position.set(10.8, 0.82, 5.5); sc.add(board);
     const plan = box(0.16, 0.03, 0.2, lam(0x1c100c), 10.8, 0.85, 5.5, sc);
     this.anims.push((_dt, t) => { plan.position.x = 10.8 + Math.sin(t * 0.6) * 0.25; plan.position.z = 5.5 + Math.sin(t * 0.9 + 1) * 0.15; });
-    this.spot('ouija', 10.8, 4.5, 1.3, () => this.say(T.eggs.ouija[this.nth('ouija') % T.eggs.ouija.length] ?? '', true));
+    this.spot('ouija', 10.8, 4.5, 1.3, () => {
+      if (this.night4()) {
+        const first = !session.run.flags['clue-word'];
+        if (first) this.clue('clue-word');
+        this.say(T.secret.ouijaWord[first ? 0 : 1] ?? '', true);
+        return;
+      }
+      this.say(T.eggs.ouija[this.nth('ouija') % T.eggs.ouija.length] ?? '', true);
+    });
     // tragaperras rota con tres sietes
     const slot = slotMachine();
     const strip = stripTexture();
@@ -513,12 +538,25 @@ export class HubWorld {
     // (el marco vacío está en la pared este, entre dos retratos)
     box(0.06, 1.1, 0.8, lam(0x1a0a0e), -0.9, 2.6, -14.0, sc);
     box(0.04, 0.12, 0.4, lam(0xc4b494, null, { emissive: 0x3a3424 }), -0.92, 1.95, -14.0, sc);
-    this.spot('emptyFrame', -1.8, -14.0, 1.2, () => this.say(T.eggs.emptyFrame, true));
+    this.spot('emptyFrame', -1.8, -14.0, 1.2, () => {
+      if (!this.night4()) { this.say(T.eggs.emptyFrame, true); return; }
+      if (session.run.flags['clue-note']) { this.say(T.secret.noteDone, true); return; }
+      this.clue('clue-note');
+      this.say(T.secret.note, true);
+    });
     // puerta de Deudores con una rendija roja
     box(1.8, 3.2, 0.25, lam(0xffffff, tex('hw-door', () => metalTex('#2a1a1a'), [1, 2])), -5.2, 1.6, -17.3, sc);
     box(0.05, 2.4, 0.03, glow(0xc24a3a), -5.2, 1.6, -17.15, sc);
     this.neon('DEUDORES', '#c24a3a', -5.2, 3.5, -17.15, 0, 1.7);
-    this.spot('lockedDoor', -5.2, -16.2, 1.6, () => this.say(T.eggs.lockedDoor, true));
+    this.spot('lockedDoor', -5.2, -16.2, 1.6, () => {
+      if (secretReady(session.run)) { this.openSecret(); return; }
+      if (this.night4()) {
+        const n = ['clue-key', 'clue-word', 'clue-note'].filter((k) => session.run.flags[k]).length;
+        this.say(T.secret.doorNight4(n), true);
+        return;
+      }
+      this.say(T.secret.doorLocked, true);
+    });
     this.cobweb(-9.4, 4.4, -17.3, 0, 1.5); this.cobweb(-0.7, 4.4, -17.3, 0, 1.5);
     this.stain(-6.0, -14.2, 1.1);
     this.mask(-9.55, 2.6, -11.0, Math.PI / 2);

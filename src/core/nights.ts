@@ -35,6 +35,36 @@ export function cursesFor(night: number): Curse[] {
   return NIGHTS.slice(0, night).flatMap((n) => (n.curse ? [n.curse] : []));
 }
 
+/** Dificultad: se elige al empezar la partida y escala la cuota, las acciones, el saldo inicial, el interés y los cobros. */
+export type Difficulty = 'easy' | 'normal' | 'hard';
+export const DIFFICULTIES: readonly Difficulty[] = ['easy', 'normal', 'hard'];
+
+export interface DifficultyDef {
+  /** Multiplica la cuota de cada noche. */
+  quota: number;
+  /** Acciones de más (o de menos) por noche. */
+  actions: number;
+  /** Saldo inicial de la noche 1. */
+  start: number;
+  /** Saldo inicial del modo infinito. */
+  endlessStart: number;
+  /** Multiplica el porcentaje de cada cobro de la casa (modo infinito). */
+  toll: number;
+  /** Interés de la hipoteca. */
+  mortgage: number;
+}
+
+export const DIFFICULTY: Record<Difficulty, DifficultyDef> = {
+  easy: { quota: 0.7, actions: 4, start: 700, endlessStart: 1500, toll: 0.7, mortgage: 0.2 },
+  normal: { quota: 1, actions: 0, start: 500, endlessStart: 1000, toll: 1, mortgage: 0.3 },
+  hard: { quota: 1.4, actions: -3, start: 400, endlessStart: 700, toll: 1.3, mortgage: 0.4 }
+};
+
+/** Cuota de la noche con la dificultad aplicada (múltiplos de 50). */
+export const quotaFor = (night: number, d: Difficulty = 'normal'): number => Math.round((nightDef(night).quota * DIFFICULTY[d].quota) / 50) * 50;
+/** Acciones de la noche con la dificultad aplicada (mínimo 8). */
+export const actionsFor = (night: number, d: Difficulty = 'normal'): number => Math.max(8, nightDef(night).actions + DIFFICULTY[d].actions);
+
 /** Interés de la hipoteca: se devuelve lo prestado más este porcentaje, sumado a la cuota de esa noche. */
 export const MORTGAGE_RATE = 0.3;
 const MORTGAGE_SHARES = [0.2, 0.4, 0.6] as const;
@@ -47,11 +77,11 @@ export interface MortgageOffer {
 }
 
 /** Ofertas de la noche: un 20 %, 40 % y 60 % de la cuota, redondeadas a 50 fichas. */
-export function mortgageOffers(night: number): MortgageOffer[] {
-  const quota = nightDef(night).quota;
+export function mortgageOffers(night: number, d: Difficulty = 'normal'): MortgageOffer[] {
+  const quota = quotaFor(night, d);
   return MORTGAGE_SHARES.map((sh) => {
     const amount = Math.max(50, Math.round((quota * sh) / 50) * 50);
-    return { amount, owed: Math.ceil(amount * (1 + MORTGAGE_RATE)) };
+    return { amount, owed: Math.ceil(amount * (1 + DIFFICULTY[d].mortgage)) };
   });
 }
 
@@ -74,8 +104,8 @@ export const ENDLESS = {
 } as const;
 
 /** Cobro de la casa: un porcentaje creciente del saldo (redondeado a 10), nunca más que el saldo. */
-export function tollFor(tollsSoFar: number, balance: number): number {
-  const pct = Math.min(ENDLESS.tollMax, ENDLESS.tollBase + ENDLESS.tollStep * tollsSoFar);
+export function tollFor(tollsSoFar: number, balance: number, d: Difficulty = 'normal'): number {
+  const pct = Math.min(ENDLESS.tollMax, ENDLESS.tollBase + ENDLESS.tollStep * tollsSoFar) * DIFFICULTY[d].toll;
   const raw = Math.max(ENDLESS.tollMin, Math.round((balance * pct) / 10) * 10);
   return Math.min(balance, raw);
 }

@@ -12,9 +12,9 @@ export function phrase(list: readonly string[]): string {
   return pick(list);
 }
 
-export function phraseFor(game: 'slots' | 'roulette' | 'race', lost: boolean, actionsLeft: number, balance: number, quota: number): string {
+export function phraseFor(game: 'slots' | 'roulette' | 'race' | 'blackjack', lost: boolean, actionsLeft: number, balance: number, quota: number): string {
   if (lost && actionsLeft <= 3 && balance < quota) return phrase(T.lines.low);
   const l = T.lines;
-  const list = game === 'slots' ? (lost ? l.slotsLose : l.slotsWin) : game === 'roulette' ? (lost ? l.rouletteLose : l.rouletteWin) : (lost ? l.raceLose : l.raceWin);
+  const list = game === 'slots' ? (lost ? l.slotsLose : l.slotsWin) : game === 'roulette' ? (lost ? l.rouletteLose : l.rouletteWin) : game === 'blackjack' ? (lost ? l.blackjackLose : l.blackjackWin) : (lost ? l.raceLose : l.raceWin);
   return phrase(list);
 }

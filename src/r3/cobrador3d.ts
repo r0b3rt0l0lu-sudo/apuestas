@@ -111,6 +111,12 @@ export class Cobrador3D extends THREE.Group {
     if (m) { (m.material as THREE.MeshBasicMaterial).map = T(key, make); (m.material as THREE.MeshBasicMaterial).needsUpdate = true; }
   }
 
+  /** Tiñe todas las capas (El Deudor es el Cobrador apagado, azulado). */
+  tint(color: number): this {
+    this.traverse((o) => { const m = (o as THREE.Mesh).material as THREE.MeshBasicMaterial | undefined; if (m && 'color' in m) m.color.set(color); });
+    return this;
+  }
+
   /** Se abalanza hacia la cámara un instante. */
   lunge(): void {
     if (session.options.reduceFlash) return;

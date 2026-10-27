@@ -54,7 +54,8 @@ export class Duel3D extends Stage {
     this.light(640, 390, 820, 0.2);
     sfx.ambience('duel');
     this.rng = new Rng(r.seed ^ (r.night * 7919) ^ 0xd0e1);
-    this.d = newDuel(this.rng, cursesFor(r.night));
+    const curses = cursesFor(r.night);
+    this.d = newDuel(this.rng, r.secret && !curses.includes('duelCandle') ? [...curses, 'duelCandle'] : curses);
     const sc = this.scene;
     sc.background = new THREE.Color(0);
     sc.fog = new THREE.Fog(0x080008, 5, 17);
@@ -97,6 +98,7 @@ export class Duel3D extends Stage {
 
     // Cobrador, flotando al fondo
     this.cob = new Cobrador3D(0.034).anchor(0, 2.5, -4.6);
+    if (r.secret) this.cob.tint(0x8aa0c0); // El Deudor: el Cobrador apagado y azulado
     sc.add(this.cob);
     const back = new THREE.PointLight(0x9c3c28, 30, 9, 1.4);
     back.position.set(0, 3.2, -3.6);
@@ -118,7 +120,7 @@ export class Duel3D extends Stage {
     this.camera.lookAt(0, 0.9, -1.0);
 
     // interfaz
-    const title = el('div', 'title center abs', T.duel.title, this.ui);
+    const title = el('div', 'title center abs', r.secret ? T.secret.duelTitle : T.duel.title, this.ui);
     Object.assign(title.style, { left: '0', right: '0', top: '12px', fontSize: '36px', color: '#ece0c0' });
     this.info = el('div', 'msg', '', this.ui); this.info.style.top = '58px'; this.info.style.color = '#c4b494';
     this.msg = el('div', 'msg', '', this.ui); this.msg.style.top = '470px';
@@ -194,7 +196,7 @@ export class Duel3D extends Stage {
 
   // ---------- flujo ----------
   private async flow(): Promise<void> {
-    for (const l of T.duel.intro) await this.say(l, 500);
+    for (const l of session.run.secret ? T.secret.duelIntro : T.duel.intro) await this.say(l, 500);
     await this.announce();
     this.refresh();
     while (!this.d.winner) {
@@ -303,7 +305,8 @@ export class Duel3D extends Stage {
     this.clearControls();
     const won = this.d.winner === 'player';
     this.cob.setMood(won ? 'sonrisa' : 'cobra');
-    await this.say(won ? T.duel.win : T.duel.lose, 1800);
+    const sec = session.run.secret;
+    await this.say(won ? (sec ? T.secret.win : T.duel.win) : (sec ? T.secret.lose : T.duel.lose), 1800);
     session.dispatch({ type: 'duelResult', won });
     goPhase();
   }

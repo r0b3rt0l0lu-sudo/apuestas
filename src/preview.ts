@@ -46,9 +46,9 @@ if (set === 'horse') {
   const race = await import('./games/race');
   race.HORSES.forEach((d, i) => {
     const look = { skin: d.skin, body: d.body, mane: d.mane, num: d.num };
-    const a = new Painter(48, 40).blit(h.drawHorse(look, 0)).blit(h.drawPole()), b = new Painter(48, 40).blit(h.drawHorse(look, 1)).blit(h.drawPole());
+    const a = new Painter(48, 40).blit(h.drawHorse(look, 0)), b = new Painter(48, 40).blit(h.drawHorse(look, 1));
     show(a, 8, [], '#241a20'); show(b, 8, [], '#241a20');
-    if (i === 5) show(new Painter(48, 40).blit(h.drawHorse(look, 0, true)).blit(h.drawPole()), 8, [], '#241a20');
+    if (i === 5) show(new Painter(48, 40).blit(h.drawHorse(look, 0, true)), 8, [], '#241a20');
   });
 }
 

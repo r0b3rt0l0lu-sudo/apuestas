@@ -1,5 +1,5 @@
-import { type Game, TABLES, canPlay, canPlayAny } from './economy';
-import { ENDLESS, LAST_NIGHT, MIN_CARRY, mortgageOffers, nightDef, tollFor } from './nights';
+import { type Game, TABLES, canPlay, canPlayAny, validBet } from './economy';
+import { DIFFICULTY, type Difficulty, ENDLESS, LAST_NIGHT, MIN_CARRY, actionsFor, mortgageOffers, nightDef, quotaFor, tollFor } from './nights';
 import { Rng } from './rng';
 
 export type Phase = 'hub' | 'playing' | 'duel' | 'dawn' | 'dead' | 'ending';
@@ -13,6 +13,7 @@ export interface NightResult {
 }
 
 export type Mode = 'campaign' | 'endless';
+export type { Difficulty };
 
 /** Estadísticas de la partida: para el resumen al morir y el manual. */
 export interface RunStats {
@@ -31,6 +32,10 @@ export interface RunState {
   version: 1;
   /** Campaña de 7 noches o modo infinito. */
   mode: Mode;
+  /** Dificultad elegida al empezar. */
+  difficulty: Difficulty;
+  /** Duelo secreto contra El Deudor en curso (noche 4). */
+  secret: boolean;
   seed: number;
   /** Estado del RNG: la misma partida se reproduce exacta tras recargar. */
   rng: number;
@@ -45,6 +50,8 @@ export interface RunState {
   debt: number;
   /** Ya se pidió la hipoteca de esta noche (solo una por noche). */
   mortgaged: boolean;
+  /** Apuesta de una mano de blackjack en curso (ya descontada del saldo; 0 si no hay mano). */
+  pending: number;
   /** Estadísticas de toda la partida. */
   stats: RunStats;
   /** Modo infinito: jugadas resueltas, saldo máximo alcanzado, cobros de la casa y el último importe. */
@@ -61,6 +68,9 @@ export type Action =
   | { type: 'resolve'; game: Game; bet: number; payout: number; rng: number }
   | { type: 'mortgage'; amount: number }
   | { type: 'find'; key: string; chips: number }
+  | { type: 'startSecret' }
+  | { type: 'deal'; bet: number; rng: number }
+  | { type: 'collect'; chips: number; extra: number }
   | { type: 'sleep' }
   | { type: 'duelResult'; won: boolean }
   | { type: 'nextNight' }
@@ -68,23 +78,25 @@ export type Action =
 
 export const SAVE_VERSION = 1 as const;
 
-export function newRun(seed: number, mode: Mode = 'campaign'): RunState {
-  const def = nightDef(1);
+export function newRun(seed: number, mode: Mode = 'campaign', difficulty: Difficulty = 'normal'): RunState {
   const endless = mode === 'endless';
-  const start = endless ? ENDLESS.start : (def.startBalance ?? MIN_CARRY);
+  const start = endless ? DIFFICULTY[difficulty].endlessStart : DIFFICULTY[difficulty].start;
   return {
     version: SAVE_VERSION,
     mode,
+    difficulty,
+    secret: false,
     seed: seed >>> 0,
     rng: new Rng(seed ^ 0x9e3779b9).state,
     night: 1,
     balance: start,
-    actionsLeft: endless ? ENDLESS.actions : def.actions,
+    actionsLeft: endless ? ENDLESS.actions : actionsFor(1, difficulty),
     history: [],
     phase: 'hub',
     forgiven: false,
     debt: 0,
     mortgaged: false,
+    pending: 0,
     stats: emptyStats(),
     plays: 0,
     peak: start,
@@ -95,7 +107,12 @@ export function newRun(seed: number, mode: Mode = 'campaign'): RunState {
 }
 
 /** Cuota de la noche más la hipoteca pedida. */
-export const quotaOf = (s: RunState): number => (s.mode === 'endless' ? 0 : nightDef(s.night).quota + s.debt);
+export const quotaOf = (s: RunState): number => (s.mode === 'endless' ? 0 : quotaFor(s.night, s.difficulty) + s.debt);
+
+/** Pistas del duelo secreto de la noche 4: la llave, la palabra de la ouija y el pagaré. */
+export const SECRET_CLUES = ['clue-key', 'clue-word', 'clue-note'] as const;
+export const secretReady = (s: RunState): boolean => s.mode === 'campaign' && s.night === 4 && SECRET_CLUES.every((k) => s.flags[k]);
+export const canStartSecret = (s: RunState): boolean => s.phase === 'hub' && secretReady(s) && !s.secret;
 export const canMortgage = (s: RunState): boolean => s.mode === 'campaign' && s.phase === 'hub' && !s.mortgaged;
 export const quotaMet = (s: RunState): boolean => s.balance >= quotaOf(s);
 export const rngOf = (s: RunState): Rng => new Rng(s.rng);
@@ -121,7 +138,7 @@ function endlessTurn(s: RunState): RunState {
   const plays = s.plays + 1;
   const peak = Math.max(s.peak, s.balance);
   if (plays % ENDLESS.tollEvery !== 0) return { ...s, plays, peak };
-  const toll = tollFor(s.tolls, s.balance);
+  const toll = tollFor(s.tolls, s.balance, s.difficulty);
   return { ...s, plays, peak, balance: s.balance - toll, tolls: s.tolls + 1, lastToll: toll };
 }
 
@@ -134,7 +151,7 @@ export function apply(s: RunState, a: Action): RunState {
       return s.phase === 'playing' ? { ...s, phase: 'hub' } : s;
     case 'resolve': {
       if (s.phase !== 'playing') return s;
-      if (!TABLES[a.game].bets.includes(a.bet)) return s;
+      if (!validBet(a.game, a.bet)) return s;
       if (!canPlay(a.game, s.balance, s.actionsLeft) || a.bet > s.balance) return s;
       const played: RunState = {
         ...s,
@@ -154,7 +171,7 @@ export function apply(s: RunState, a: Action): RunState {
     }
     case 'mortgage': {
       if (!canMortgage(s)) return s;
-      const offer = mortgageOffers(s.night).find((o) => o.amount === a.amount);
+      const offer = mortgageOffers(s.night, s.difficulty).find((o) => o.amount === a.amount);
       if (!offer) return s;
       return { ...s, balance: s.balance + offer.amount, debt: s.debt + offer.owed, mortgaged: true };
     }
@@ -168,8 +185,45 @@ export function apply(s: RunState, a: Action): RunState {
         return { ...s, phase: 'dawn' };
       }
       return s;
+    case 'deal': {
+      // una mano de blackjack: la apuesta y las acciones se descuentan al repartir, el cobro llega al terminar
+      if (s.phase !== 'playing' || s.pending > 0) return s;
+      if (!TABLES.blackjack.bets.includes(a.bet) || !canPlay('blackjack', s.balance, s.actionsLeft) || a.bet > s.balance) return s;
+      return {
+        ...s,
+        rng: a.rng,
+        balance: s.balance - a.bet,
+        actionsLeft: s.actionsLeft - TABLES.blackjack.cost,
+        pending: a.bet,
+        stats: { ...s.stats, plays: s.stats.plays + 1, wagered: s.stats.wagered + a.bet }
+      };
+    }
+    case 'collect': {
+      if (s.phase !== 'playing' || s.pending <= 0) return s;
+      // `extra`: lo que se dobló; solo puede ser igual a la apuesta y debe haber saldo
+      if (a.chips < 0 || (a.extra !== 0 && (a.extra !== s.pending || a.extra > s.balance))) return s;
+      const stake = s.pending + a.extra;
+      const paid: RunState = {
+        ...s,
+        balance: s.balance - a.extra + a.chips,
+        pending: 0,
+        peak: Math.max(s.peak, s.balance - a.extra + a.chips),
+        stats: {
+          ...s.stats,
+          wins: s.stats.wins + (a.chips > stake ? 1 : 0),
+          biggestWin: Math.max(s.stats.biggestWin, a.chips - stake),
+          wagered: s.stats.wagered + a.extra,
+          returned: s.stats.returned + a.chips
+        }
+      };
+      return settle(s.mode === 'endless' ? endlessTurn(paid) : paid);
+    }
+    case 'startSecret':
+      return canStartSecret(s) ? { ...s, phase: 'duel', secret: true } : s;
     case 'duelResult':
       if (s.phase !== 'duel') return s;
+      // el duelo secreto contra El Deudor: ganarlo es escapar; perderlo, morir
+      if (s.secret) return a.won ? { ...s, phase: 'ending', secret: false, flags: { ...s.flags, escaped: true } } : { ...s, phase: 'dead', secret: false };
       return a.won
         ? { ...s, phase: 'dawn', forgiven: true, history: record(s, 'duel') }
         : { ...s, phase: 'dead' };
@@ -179,12 +233,13 @@ export function apply(s: RunState, a: Action): RunState {
       const paid = s.forgiven ? s.balance : s.balance - quotaOf(s);
       if (s.night >= LAST_NIGHT) return { ...s, history, balance: paid, phase: 'ending' };
       const next = nightDef(s.night + 1);
+      void next;
       return {
         ...s,
         history,
         night: next.night,
         balance: Math.max(paid, MIN_CARRY),
-        actionsLeft: next.actions,
+        actionsLeft: actionsFor(next.night, s.difficulty),
         forgiven: false,
         debt: 0,
         mortgaged: false,

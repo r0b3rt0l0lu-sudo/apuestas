@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import { drawDawnSky } from '../../art/scenery';
 import { sfx } from '../../audio/sfx';
-import { LAST_NIGHT, nightDef } from '../../core/nights';
+import { LAST_NIGHT, quotaFor } from '../../core/nights';
 import { session } from '../../core/session';
 import { quotaOf } from '../../core/state';
-import { T } from '../../i18n/es';
+import { T, fmt } from '../../i18n/es';
 import { attachNav, btn, el } from '../../ui/dom/kit';
 import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
@@ -67,7 +67,7 @@ export class Dawn3D extends Stage {
     Object.assign(pan.style, { left: '340px', top: '170px', width: '600px', fontSize: '38px', color: '#ece0c0', padding: '4px 12px 10px', lineHeight: '1.1' });
     el('div', '', r.forgiven ? T.dawn.forgiven : T.dawn.paid(q), pan);
     el('div', '', T.dawn.left(r.forgiven ? r.balance : r.balance - q), pan);
-    const next = r.night >= LAST_NIGHT ? T.dawn.lastNext : T.dawn.next(T.night.nextWords[nightDef(r.night + 1).night - 1] ?? '');
+    const next = r.night >= LAST_NIGHT ? T.dawn.lastNext : T.dawn.next(fmt(quotaFor(r.night + 1, r.difficulty)));
     const bub = el('div', 'abs frame dialog center', next, this.ui);
     Object.assign(bub.style, { left: '560px', top: '372px', width: '640px', fontSize: '38px', color: '#fff6dc', padding: '4px 12px 10px' });
     const row = el('div', 'abs hit', '', this.ui);

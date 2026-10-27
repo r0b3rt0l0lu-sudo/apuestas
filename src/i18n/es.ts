@@ -1,5 +1,5 @@
 /** Todo el texto del juego. Las frases del Cobrador van entre comillas angulares. */
-import { nightDef } from '../core/nights';
+import { type Difficulty, actionsFor, nightDef, quotaFor } from '../core/nights';
 
 export const fmt = (n: number): string => n.toLocaleString('es-ES');
 const pct = (x: number): string => `${(x * 100).toFixed(0)} %`;
@@ -27,6 +27,19 @@ export const T = {
   keysHint: 'Flechas: moverse · Intro/Espacio: elegir · Esc: volver',
 
   opt: { volume: 'Volumen general', music: 'Música y ambiente', sfx: 'Efectos', reduceFlash: 'Reducir destellos y temblores', sensitivity: 'Sensibilidad del ratón', hints: 'Controles en pantalla', minimap: 'Minimapa', on: 'Sí', off: 'No' },
+
+  difficulty: {
+    label: 'Dificultad',
+    easy: 'Fácil',
+    normal: 'Normal',
+    hard: 'Difícil',
+    desc: {
+      easy: 'Cuotas un 30 % menores, 4 acciones más por noche, más saldo inicial, hipoteca al 20 % y cobros más suaves.',
+      normal: 'La experiencia pensada: cuotas, acciones, hipoteca al 30 % y cobros de la casa estándar.',
+      hard: 'Cuotas un 40 % mayores, 3 acciones menos por noche, menos saldo inicial, hipoteca al 40 % y cobros más duros.'
+    } as Record<string, string>,
+    short: (d: string) => `Dificultad: ${d}`
+  },
 
   hud: {
     night: 'NOCHE', quota: 'CUOTA', balance: 'SALDO', actions: 'ACCIONES',
@@ -62,12 +75,13 @@ export const T = {
     slots: 'Tragaperras',
     roulette: 'Ruleta',
     race: 'Carreras de caballitos',
+    blackjack: 'Blackjack',
     mortgage: 'Hipoteca',
     cost: (c: number, min: number) => `${c} ${c === 1 ? 'acción' : 'acciones'} · apuesta mínima ${fmt(min)}`,
     sleep: 'Esperar al amanecer',
     unavailable: 'Sin acciones o fichas para esta mesa',
     quotaMet: '«La cuota está cubierta. Aún puedes tentar a la suerte.»',
-    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F: usar · E: fumar · 1-4: mesas · M: plano · H: manual',
+    controls: 'WASD o flechas: moverte · clic en la sala: mirar con el ratón (Esc lo suelta) · F: usar · E: fumar · 1-5: mesas · M: plano · H: manual',
     use: (name: string) => `[F] ${name}`,
     smoke: ['«Fuma. Te queda poco tiempo y mucho humo.»', '«Esa tos no es del tabaco.»', '«Todo se consume, igual que tu cuota.»']
   },
@@ -81,6 +95,39 @@ export const T = {
     hello: '¿Hola?',
     late: '«Llegas tarde.»',
     abducted: ['…', '«Bienvenido a la última feria.»', '«Llegas justo a tiempo para pagar.»']
+  },
+
+  secret: {
+    nightHint: '«Esta noche, alguien golpea la puerta de Deudores desde dentro. Yo que tú no la abriría.»',
+    doorLocked: 'DEUDORES. Cerrada. Se abrirá cuando no puedas pagar.',
+    doorNight4: (n: number) => `DEUDORES. Algo respira al otro lado. La cerradura pide una llave, un nombre y una firma. Tienes ${n} de 3.`,
+    vanity: 'Un tocador roto. Nada en los cajones.',
+    vanityKey: 'Bajo el espejo del tocador, una llave de hierro con el nombre de alguien grabado: «DEUDOR». La guardas.',
+    vanityDone: 'Solo queda el hueco donde estaba la llave.',
+    ouijaWord: ['La plancheta se mueve sola: D… E… U… D… O… R.', 'Una palabra. Un nombre. Anotas «DEUDOR» en tu memoria.'],
+    note: 'Tras el marco vacío hay un pagaré doblado. «Debo mi vida a la casa. — El Deudor». Está firmado con tu letra.',
+    noteDone: 'El pagaré sigue en tu bolsillo.',
+    title: 'LA PUERTA DE DEUDORES',
+    body: [
+      'Tienes la llave, el nombre y la firma. La cerradura gira sola.',
+      'Detrás espera El Deudor: lo que queda de quien no pudo pagar. Es un duelo a muerte, con una vela más para él.',
+      'Si lo vences, la feria se queda sin nadie que cobre. Si no, ya sabes cómo acaba.'
+    ],
+    open: 'Abrir la puerta',
+    cancel: 'Todavía no',
+    boss: 'EL DEUDOR',
+    duelTitle: 'EL DEUDOR',
+    duelIntro: ['«…»', 'Alguien se levanta de la silla del fondo. No lleva chistera. Lleva tu cara.', '«Pagué. Pagué. Pagué. Ahora te toca a ti.»'],
+    win: 'Cae sobre la mesa. Detrás, la pared se abre: luz de verdad.',
+    lose: '«Otro deudor.» La puerta se cierra.',
+    endTitle: 'ESCAPASTE',
+    endLines: [
+      'El Deudor se deshace sobre el tapete: una levita vacía y una moneda.',
+      'La puerta de la feria, la que no tenía picaporte, se abre sola.',
+      'Afuera amanece de verdad. Detrás de ti, una moneda rueda por el suelo y se detiene.',
+      '«…Siempre vuelvo.»'
+    ],
+    endAgain: 'Volver al título'
   },
 
   stats: {
@@ -126,12 +173,13 @@ export const T = {
           ['Flechas ← →', 'Girar'],
           ['Clic en la escena', 'Capturar el ratón para mirar (Esc lo suelta)'],
           ['F · Intro · Espacio', 'Usar / entrar en una mesa / examinar'],
-          ['1 · 2 · 3 · 4', 'Ir directo a tragaperras, ruleta, carreras y hipoteca'],
+          ['1 · 2 · 3 · 4 · 5', 'Ir directo a tragaperras, ruleta, carreras, blackjack y hipoteca'],
           ['E', 'Fumar un cigarro'],
           ['Z', 'Esperar al amanecer (con la cuota cubierta)'],
           ['M · H · Esc', 'Minimapa · este manual · opciones'],
           ['En las mesas: Espacio', 'Jugar o repetir la última apuesta'],
           ['En las mesas: Esc', 'Volver al pasillo'],
+          ['En el blackjack: P / S / D', 'Pedir carta / plantarse / doblar'],
           ['En el duelo: A / S', 'Disparar a El Cobrador / dispararte'],
           ['En el duelo: 1 – 5', 'Usar un objeto']
         ]
@@ -168,6 +216,7 @@ export const T = {
       run: { title: 'Tu partida' }
     },
     tables: {
+      blackjack: 'BLACKJACK · 2 acciones · apuestas 50 / 100 / 250 / 500. Intenta acercarte a 21 sin pasarte y superar la mano de El Cobrador, que pide carta hasta llegar a 17. Blackjack (as + figura) paga 3 a 2; ganar paga el doble; empatar devuelve la apuesta. Doblar: duplicas la apuesta y recibes una sola carta. Las fichas se descuentan al repartir.',
       slots: 'TRAGAPERRAS · 1 acción · apuestas 50 / 100 / 250. Tres símbolos iguales en la línea central pagan según la tabla; dos iguales cualquiera devuelven la apuesta.',
       slotsCols: ['Símbolo', 'Peso', 'Tres iguales'],
       roulette: 'RULETA · 2 acciones · fichas 50 / 100 / 250 / 500. Pleno ×36; rojo, negro, par, impar, 1-18 y 19-36 ×2. El 0 devuelve la mitad de las exteriores. Desde la noche 4 hay también un 00.',
@@ -183,7 +232,8 @@ export const T = {
       'Antes de pedir una hipoteca, calcula si te llega con las acciones que quedan: es dinero para jugar, no regalado.',
       'En el duelo, cuenta los cartuchos reales y de fogueo que quedan. Casi todo se decide ahí.',
       'No te quedes siempre en el pasillo: hay fichas escondidas por las salas.',
-      'Si ves que no llegas a la cuota, la hipoteca y el duelo son tus salidas. Piensa cuál te conviene.'
+      'Si ves que no llegas a la cuota, la hipoteca y el duelo son tus salidas. Piensa cuál te conviene.',
+      'La cuarta noche es distinta. Escucha lo que dice El Cobrador… y mira las puertas.'
     ],
     run: {
       empty: 'Todavía no has jugado ninguna ronda.',
@@ -202,7 +252,7 @@ export const T = {
     names: {
       coin: 'Moneda', ouija: 'Tablero', jukebox: 'Gramola', tv: 'Televisor', slot777: 'Tragaperras rota', mannequin: 'Maniquí',
       doll: 'Muñeca', jars: 'Frascos', mirror: 'Espejo', ledger: 'Libro de deudas', portraits: 'Retratos', emptyFrame: 'Marco vacío',
-      lockedDoor: 'Puerta', exit: 'Salida', phone: 'Teléfono', poster: 'Cartel', tarot: 'Cartas', clock: 'Reloj'
+      lockedDoor: 'Puerta', vanity: 'Tocador', exit: 'Salida', phone: 'Teléfono', poster: 'Cartel', tarot: 'Cartas', clock: 'Reloj'
     } as Record<string, string>,
     coin: '«Una moneda con la cara de alguien que conoces.» Te la guardas: +100 fichas.',
     coinDone: 'Solo queda el hueco donde estaba la moneda.',
@@ -248,16 +298,13 @@ export const T = {
   tutorial: [
     '«Bienvenido a la feria. No hay salida. Hay cuota.»',
     '«Cada noche fijo una cantidad de fichas. Si al amanecer no la tienes, abro la puerta de Deudores.»',
-    '«Tienes acciones limitadas. La tragaperras cuesta una, la ruleta dos y los caballitos tres.»',
+    '«Tienes acciones limitadas. La tragaperras cuesta una, la ruleta y el blackjack dos, y los caballitos tres.»',
     '«Si no pagas, tú y yo jugamos a otra cosa. Un trabuco. Cartuchos reales y de fogueo. Gana quien quede con velas.»',
     '«Siete noches. Empecemos.»'
   ],
 
   night: {
-    intro: (n: number) => {
-      const d = nightDef(n);
-      return `«Noche ${n}. Cuota: ${fmt(d.quota)}. ${d.actions} acciones. Ni una más.»`;
-    },
+    intro: (n: number, diff: Difficulty = 'normal') => `«Noche ${n}. Cuota: ${fmt(quotaFor(n, diff))}. ${actionsFor(n, diff)} acciones. Ni una más.»`,
     curse: {
       slotReel3: 'Una bombilla de la tragaperras se ha fundido: el tercer rodillo tarda más.',
       doubleZero: 'El Ojo de la ruleta ve antes: ahora hay dos ceros (0 y 00).',
@@ -270,6 +317,25 @@ export const T = {
       return own ? T.night.curse[own] : '';
     },
     nextWords: ['mil', 'dos mil quinientas', 'cinco mil', 'nueve mil', 'quince mil', 'veinticinco mil', 'cincuenta mil']
+  },
+
+  blackjack: {
+    title: 'BLACKJACK',
+    deal: 'Repartir',
+    hit: 'Pedir',
+    stand: 'Plantarse',
+    double: 'Doblar',
+    you: 'TÚ',
+    dealer: 'COBRADOR',
+    help: 'Blackjack paga 3 a 2 · el Cobrador se planta con 17 · doblar: una sola carta',
+    blackjack: '¡BLACKJACK!',
+    win: 'GANAS',
+    lose: 'PIERDES',
+    push: 'EMPATE',
+    bust: 'TE PASAS',
+    dealerBust: 'SE PASA EL COBRADOR',
+    hidden: '?',
+    back: 'Volver al pasillo'
   },
 
   slots: {
@@ -360,6 +426,8 @@ export const T = {
     slotsLose: ['«Te tiemblan las manos.»', '«La máquina nunca olvida.»', '«Otra vez. Otra vez.»', '«Las monedas se acuerdan de mí.»'],
     rouletteWin: ['«El Ojo parpadeó. Te vio.»', '«Hoy te mira con cariño.»', '«No te acostumbres.»'],
     rouletteLose: ['«La bola siempre sabe.»', '«El cero te espera.»', '«Qué silencio, ¿verdad?»'],
+    blackjackWin: ['«Las cartas te quieren hoy.»', '«Veintiuno. Qué casualidad.»', '«Disfruta la racha. No dura.»'],
+    blackjackLose: ['«La baraja recuerda a los que se pasan.»', '«Casi. Siempre casi.»', '«Otra mano. Otra deuda.»'],
     raceWin: ['«Un caballito agradecido.»', '«Galopan hacia donde les mando.»', '«Cobra. Mientras puedas.»'],
     raceLose: ['«Cerraron la apuesta. Y los ojos.»', '«El tiovivo no se detiene por ti.»', '«Mañana, otra vuelta.»'],
     low: ['«Quedan pocas acciones. Qué pena.»', '«El tiempo se acaba.»']

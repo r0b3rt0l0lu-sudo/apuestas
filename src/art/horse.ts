@@ -1,6 +1,6 @@
 import { C } from '../config';
 import type { Skin } from '../games/race';
-import { Painter, type Ramp, darken, digit, hash, ramp } from './painter';
+import { Painter, type Ramp, digit, hash, ramp } from './painter';
 
 export const HW = 48;
 export const HH = 40;
@@ -15,7 +15,7 @@ export interface HorseLook {
 
 /** Colores base de cada skin (las skins sin caballo en carrera son solo arte de referencia). */
 export const SKIN_LOOKS: Record<Skin, { body: string; mane: string }> = {
-  clasico: { body: '#BFB8A8', mane: '#5E5640' },
+  clasico: { body: '#A8A4B4', mane: '#2E2A3C' },
   esqueleto: { body: '#E8E0C8', mane: '#9C9278' },
   quemado: { body: '#3A302A', mane: '#241C18' },
   ahogado: { body: '#5E7A72', mane: '#2E4A3A' },
@@ -24,21 +24,8 @@ export const SKIN_LOOKS: Record<Skin, { body: string; mane: string }> = {
   trapo: { body: '#A08A6A', mane: '#5E4A32' }
 };
 
-/** Barra dorada con espiral: capa aparte y estática (no sube con el galope). */
-export function drawPole(): Painter {
-  const p = new Painter(HW, HH);
-  const g = ramp(C.gold);
-  for (let y = 0; y < HH; y++) {
-    p.px(22, y, g.l1).px(23, y, g.b).px(24, y, g.d1);
-    const s = (y + 1) % 6;
-    if (s < 3) p.px(22 + (s % 3), y, g.l2).px(23 + (s % 2), y, g.d2);
-  }
-  p.shadedEllipse(23, 1, 4, 2, g).shadedEllipse(23, 38, 4, 2, g);
-  return p.outlineSel(K, 0.8);
-}
-
 /** Pata gruesa con luz a la izquierda y sombra a la derecha. */
-function limb(p: Painter, pts: number[][], r: Ramp, hoof: string): void {
+function limb(p: Painter, pts: number[][], r: Ramp, hoof: string, wrap = ''): void {
   for (let i = 0; i + 1 < pts.length; i++) {
     const [a, b] = [pts[i] as number[], pts[i + 1] as number[]];
     p.line(a[0]! + 1, a[1]!, b[0]! + 1, b[1]!, r.d1, 2);
@@ -47,9 +34,13 @@ function limb(p: Painter, pts: number[][], r: Ramp, hoof: string): void {
   }
   const e = pts[pts.length - 1] as number[];
   p.rect(e[0]! - 1, e[1]!, 4, 2, hoof).px(e[0]! - 1, e[1]!, '#5a5060');
+  if (wrap) p.rect(e[0]! - 1, e[1]! - 3, 4, 3, wrap).px(e[0]!, e[1]! - 2, K); // venda de carreras
 }
 
-/** Cuerpo del caballito (sin barra). `frame` 0/1: galope; en el 1 sube 1 px. */
+/** Colores de la manta (la cuadra de cada caballo) según su número. */
+const CLOTH = ['#c24a3a', '#3a6ab0', '#e8d27a', '#e07b1e', '#3a8a6a', '#8a4a8a'] as const;
+
+/** Caballo de carreras en pleno galope, sin barra ni silla de tiovivo. `frame` 0/1: galope; en el 1 sube 1 px. */
 export function drawHorse(look: HorseLook, frame: 0 | 1, glitch = false): Painter {
   const p = new Painter(HW, HH);
   const { skin } = look;
@@ -57,14 +48,16 @@ export function drawHorse(look: HorseLook, frame: 0 | 1, glitch = false): Painte
   const far = ramp(Painter.shade(look.body, 0.62)); // patas lejanas al 62 %
   const hoof = skin === 'esqueleto' ? '#9c9278' : '#2a2030';
   const lg = frame === 0
-    ? { fn: [[31, 22], [36, 26], [41, 29]], ff: [[28, 22], [33, 27], [37, 30]], hn: [[14, 22], [10, 27], [6, 30]], hf: [[17, 22], [13, 28], [9, 31]] }
-    : { fn: [[31, 22], [34, 28], [33, 32]], ff: [[28, 22], [30, 27], [28, 31]], hn: [[14, 22], [17, 28], [14, 32]], hf: [[17, 22], [20, 28], [18, 32]] };
-  limb(p, lg.ff, far, hoof);
-  limb(p, lg.hf, far, hoof);
+    ? { fn: [[31, 22], [36, 27], [42, 32]], ff: [[28, 22], [33, 28], [38, 33]], hn: [[14, 22], [9, 28], [5, 33]], hf: [[17, 22], [12, 29], [8, 34]] }
+    : { fn: [[31, 22], [34, 29], [33, 35]], ff: [[28, 22], [30, 28], [28, 34]], hn: [[14, 22], [17, 29], [14, 35]], hf: [[17, 22], [20, 29], [18, 35]] };
+  const cloth = ramp(CLOTH[(look.num - 1) % CLOTH.length] ?? CLOTH[0]);
+  const wrapCol = skin === 'esqueleto' || skin === 'porcelana' ? '#9c9278' : '#ece0c0';
+  limb(p, lg.ff, far, hoof, wrapCol);
+  limb(p, lg.hf, far, hoof, wrapCol);
 
   // cola con mechones
-  p.fillBevel([[11, 11], [5, 13], [2, 21], [4, 27], [7, 25], [6, 18], [9, 15]], mane);
-  p.line(5, 15, 3, 24, mane.l1).line(7, 14, 5, 22, mane.d1);
+  p.fillBevel([[11, 11], [4, 12], [0, 20], [1, 30], [5, 28], [5, 19], [9, 15]], mane);
+  p.line(4, 15, 1, 27, mane.l1).line(7, 14, 4, 24, mane.d1);
   // tronco, cuello y cabeza
   p.fillBevel([[9, 13], [15, 9], [29, 9], [36, 13], [36, 21], [31, 25], [15, 25], [8, 20]], body);
   p.fillBevel([[29, 12], [33, 3], [41, 3], [39, 15], [32, 19]], body);
@@ -73,29 +66,20 @@ export function drawHorse(look: HorseLook, frame: 0 | 1, glitch = false): Painte
   p.fillBevel([[27, 10], [31, 1], [35, 2], [33, 8], [30, 13]], mane, { depth: 1 });
   for (let i = 0; i < 4; i++) p.line(28 + i, 11 - i * 2, 31 + i, 4 - i, i % 2 ? mane.l2 : mane.l1);
   p.poly([[36, 3], [37, 0], [40, 3]], body.b).px(37, 0, K).px(38, 1, body.d1);
-  limb(p, lg.fn, body, hoof);
-  limb(p, lg.hn, body, hoof);
+  limb(p, lg.fn, body, hoof, wrapCol);
+  limb(p, lg.hn, body, hoof, wrapCol);
   // músculo: pecho y anca
   p.line(31, 15, 33, 21, body.d1).line(14, 13, 12, 20, body.d1);
   p.px(18, 12, body.l2).px(19, 12, body.l2).px(20, 12, body.l1);
 
-  // pintura desconchada: la madera asoma
-  const wood = skin === 'esqueleto' ? C.textDim : '#8c6a42';
-  [[14, 14, 2], [15, 14, 1], [26, 21, 2], [27, 22, 1], [33, 9, 1], [20, 23, 2], [11, 18, 1]].forEach(([x, y, w]) => { p.rect(x!, y!, w!, 1, wood); p.px(x!, y! + 1, darken(wood, 0.5)); });
-
-  // silla, ribete, joyas, borlas
-  const saddle = ramp(skin === 'luto' ? '#1a1620' : '#7a1f2c');
-  const trim = ramp(skin === 'luto' ? '#cfc6d0' : C.gold);
-  p.fillBevel([[15, 10], [29, 10], [30, 14], [14, 14]], saddle, { depth: 1 });
-  p.rect(14, 14, 17, 1, trim.b).rect(14, 14, 17, 1, trim.l1);
-  p.px(18, 11, C.eyeRed).px(22, 10, C.lamp).px(26, 11, skin === 'luto' ? '#fff' : C.patina);
-  p.rect(13, 15, 1, 4, trim.b).px(13, 19, trim.l1).rect(31, 15, 1, 4, trim.b).px(31, 19, trim.l1);
-  p.rect(17, 15, 8, 7, trim.d1).rect(18, 16, 6, 5, K);
+  // manta con el dorsal de la cuadra, cincha de cuero, cintas en la crin y bridón con cabezada
+  p.fillBevel([[15, 10], [29, 10], [30, 15], [14, 15]], cloth, { depth: 1 });
+  p.rect(14, 15, 17, 1, cloth.d2).rect(15, 10, 14, 1, cloth.l1);
+  p.line(21, 15, 21, 23, '#3a2418').line(22, 15, 22, 23, '#5a3a22'); // cincha
+  p.rect(17, 15, 8, 7, '#241c28').rect(18, 16, 6, 5, K);
   digit(p, look.num, 20, 16, '#EDE4C6');
-
-  // guirnalda marchita y brida con remaches
-  [[33, 4], [34, 7], [33, 10], [32, 13], [36, 11]].forEach(([x, y], i) => p.px(x!, y!, i % 2 ? '#c27a6a' : '#8f8872'));
-  p.line(39, 4, 43, 11, ramp(C.brass).b).px(41, 6, C.lamp).px(43, 9, C.lamp).px(40, 5, ramp(C.brass).l2);
+  p.px(31, 4, cloth.b).px(32, 4, cloth.l1).px(33, 6, cloth.b).px(30, 7, cloth.l1).px(29, 10, cloth.b);
+  p.line(39, 4, 43, 11, '#3a2418').px(41, 6, '#5a3a22').px(40, 5, '#5a3a22').rect(38, 9, 3, 2, '#241c28');
 
   // cara: cuenca con punto rojo (parpadea), nariz, sonrisa con dientes y lágrima
   const open = glitch;
@@ -105,7 +89,7 @@ export function drawHorse(look: HorseLook, frame: 0 | 1, glitch = false): Painte
   p.px(46, 8, K).px(46, 9, body.d2);
   p.rect(43, 10, open ? 4 : 3, open ? 2 : 1, K).px(44, 10, '#EDE4C6').px(46, 10, '#EDE4C6').px(45, 9, '#EDE4C6');
   if (open) p.px(43, 12, C.eyeRed);
-  p.px(40, 8, glitch ? C.eyeRed : '#8a5230').px(40, 9, glitch ? C.eyeRed : '#6e4a2e'); // lágrima de óxido
+  p.px(40, 8, glitch ? C.eyeRed : body.d1).px(40, 9, glitch ? C.eyeRed : body.d2); // lágrima
 
   skinDetails(p, skin, frame);
   const out = frame === 1 ? new Painter(HW, HH) : p;

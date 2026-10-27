@@ -26,6 +26,10 @@ export function openOptions(parent: HTMLElement, onClose?: () => void): void {
       };
       onOff('hints', T.opt.hints);
       onOff('minimap', T.opt.minimap);
+      const diffs = ['easy', 'normal', 'hard'] as const;
+      const diffText = () => `${T.difficulty.label}: ${T.difficulty[session.options.difficulty]}`;
+      const db = btn(col, diffText(), () => { session.setOptions({ difficulty: diffs[(diffs.indexOf(session.options.difficulty) + 1) % diffs.length] ?? 'normal' }); setBtnText(db, diffText()); });
+      db.title = T.difficulty.desc[session.options.difficulty] ?? '';
       const flash = () => `${T.opt.reduceFlash}: ${session.options.reduceFlash ? T.opt.on : T.opt.off}`;
       const f = btn(col, flash(), () => { session.setOptions({ reduceFlash: !session.options.reduceFlash }); setBtnText(f, flash()); });
     }

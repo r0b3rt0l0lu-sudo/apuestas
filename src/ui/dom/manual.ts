@@ -35,6 +35,7 @@ function pages(): Page[] {
         const probs = probsFor([]);
         table(b, T.manual.tables.raceCols, HORSES.map((h, i) => [`${h.num} ${h.name}`, `×${String(h.pays).replace('.', ',')}`, `${Math.round((probs[i] ?? 0) * 100)} %`]));
         const rt = HORSES.map((h, i) => (probs[i] ?? 0) * h.pays);
+        el('p', '', T.manual.tables.blackjack, b);
         el('p', 'mrtp', T.manual.tables.rtp(slotsRtp(), rouletteRtp('exterior', false), Math.min(...rt), Math.max(...rt)), b);
       }
     },
@@ -43,7 +44,7 @@ function pages(): Page[] {
       title: P.money.title,
       render: (b) => {
         lines(b, P.money.lines);
-        const offers = mortgageOffers(Math.max(1, session.run.night));
+        const offers = mortgageOffers(Math.max(1, session.run.night), session.run.difficulty);
         table(b, null, [
           ...offers.map((o) => [T.mortgage.option(o.amount, o.owed), '']),
           ...RANKS.map((r) => [T.endless.ranks[r.id] ?? r.id, `${fmt(r.from)}+`])

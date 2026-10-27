@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Rng } from '../src/core/rng';
 import { type DuelState, decide, newDuel, shoot, useItem } from '../src/games/duel';
+import * as blackjack from '../src/games/blackjack';
 import * as race from '../src/games/race';
 import * as roulette from '../src/games/roulette';
 import * as slots from '../src/games/slots';
@@ -294,5 +295,57 @@ describe('frases', () => {
     const list = ['a', 'b', 'c'];
     let last = '';
     for (let i = 0; i < 100; i++) { const s = pick(list); expect(s).not.toBe(last); last = s; }
+  });
+});
+
+const c = (rank: number, suit: 0 | 1 | 2 | 3 = 0): blackjack.Card => ({ rank, suit });
+
+describe('blackjack', () => {
+  it('valor de la mano: ases blandos y duros', () => {
+    expect(blackjack.handValue([c(1), c(13)])).toEqual({ total: 21, soft: true });
+    expect(blackjack.handValue([c(1), c(6)])).toEqual({ total: 17, soft: true });
+    expect(blackjack.handValue([c(1), c(6), c(10)])).toEqual({ total: 17, soft: false });
+    expect(blackjack.handValue([c(1), c(1), c(9)])).toEqual({ total: 21, soft: true });
+    expect(blackjack.handValue([c(13), c(12), c(5)]).total).toBe(25);
+    expect(blackjack.isBust([c(13), c(12), c(5)])).toBe(true);
+  });
+  it('solo dos cartas que suman 21 son blackjack', () => {
+    expect(blackjack.isBlackjack([c(1), c(12)])).toBe(true);
+    expect(blackjack.isBlackjack([c(7), c(7), c(7)])).toBe(false);
+  });
+  it('el crupier se planta con cualquier 17 y pide con 16', () => {
+    expect(blackjack.dealerMustHit([c(10), c(6)])).toBe(true);
+    expect(blackjack.dealerMustHit([c(10), c(7)])).toBe(false);
+    expect(blackjack.dealerMustHit([c(1), c(6)])).toBe(false); // 17 blando: se planta
+    const r = blackjack.playDealer([c(10), c(2)], [c(3), c(4), c(9)], 0);
+    expect(r.hand.map((x) => x.rank)).toEqual([10, 2, 3, 4]); // 12 → 15 → 19
+    expect(r.next).toBe(2);
+  });
+  it('resultados y pagos', () => {
+    const o = blackjack.outcomeOf;
+    expect(o([c(1), c(13)], [c(10), c(9)])).toBe('blackjack');
+    expect(o([c(1), c(13)], [c(1), c(12)])).toBe('push');
+    expect(o([c(10), c(9)], [c(1), c(12)])).toBe('lose');
+    expect(o([c(10), c(10), c(5)], [c(10), c(9)])).toBe('bust');
+    expect(o([c(10), c(9)], [c(10), c(6), c(9)])).toBe('win'); // el crupier se pasa
+    expect(o([c(10), c(8)], [c(10), c(8)])).toBe('push');
+    expect(o([c(10), c(8)], [c(10), c(9)])).toBe('lose');
+    expect(blackjack.payoutFor('blackjack', 100)).toBe(250);
+    expect(blackjack.payoutFor('win', 100)).toBe(200);
+    expect(blackjack.payoutFor('push', 100)).toBe(100);
+    expect(blackjack.payoutFor('lose', 100)).toBe(0);
+    expect(blackjack.payoutFor('bust', 100)).toBe(0);
+  });
+  it('la baraja tiene 52 cartas distintas y es reproducible por semilla', () => {
+    const d = blackjack.newDeck(new Rng(5));
+    expect(d).toHaveLength(52);
+    expect(new Set(d.map((x) => `${x.rank}-${x.suit}`)).size).toBe(52);
+    expect(blackjack.newDeck(new Rng(5))).toEqual(d);
+    expect(blackjack.newDeck(new Rng(6))).not.toEqual(d);
+  });
+  it('una estrategia simple (pedir con menos de 17) devuelve algo menos del 100 %', () => {
+    const rtp = blackjack.simulateSimple(new Rng(11), 120_000);
+    expect(rtp).toBeGreaterThan(0.9);
+    expect(rtp).toBeLessThan(0.99);
   });
 });

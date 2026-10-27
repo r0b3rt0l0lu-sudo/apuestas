@@ -86,4 +86,4 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .mtab td { padding: 2px 8px; border-bottom: 1px solid #26090e; }
 .mtab td:first-child { color: #e8d27a; }
 .mrtp { color: #c4b494; font-size: 26px; }
-.minimap { position: absolute; right: 16px; top: 150px; image-rendering: pixelated; border: 2px solid #8c7442; background: #05010acc; pointer-events: none; }
+.minimap { position: absolute; right: 16px; bottom: 172px; image-rendering: pixelated; border: 2px solid #8c7442; background: #05010acc; pointer-events: none; }

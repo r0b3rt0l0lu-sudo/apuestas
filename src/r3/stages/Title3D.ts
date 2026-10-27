@@ -6,7 +6,7 @@ import { Cobrador3D } from '../cobrador3d';
 import { engine } from '../engine';
 import { ferris, ground, lam, lampPost, sky, tent } from '../models';
 import { Stage } from '../stage';
-import { attachNav, btn, el } from '../../ui/dom/kit';
+import { attachNav, btn, el, setBtnText } from '../../ui/dom/kit';
 import { openManual } from '../../ui/dom/manual';
 import { openOptions } from '../../ui/dom/options';
 import { showOverlay } from '../../ui/dom/overlay';
@@ -97,6 +97,16 @@ export class Title3D extends Stage {
     void eb;
     btn(this.menu, T.manual.button, () => openManual(this.ui), { cls: 'big', style: { width: '420px', minHeight: '62px' } });
     btn(this.menu, T.options, () => openOptions(this.ui), { cls: 'big', style: { width: '420px', minHeight: '62px' } });
+    // dificultad de la próxima partida: se cambia con un clic (o en Opciones)
+    const diffText = () => `${T.difficulty.short(T.difficulty[session.options.difficulty])} ›`;
+    const diff = btn(this.ui, diffText(), () => {
+      const order = ['easy', 'normal', 'hard'] as const;
+      session.setOptions({ difficulty: order[(order.indexOf(session.options.difficulty) + 1) % order.length] ?? 'normal' });
+      setBtnText(diff, diffText());
+      dtxt.textContent = T.difficulty.desc[session.options.difficulty] ?? '';
+    }, { cls: 'small hit', style: { position: 'absolute', right: '60px', bottom: '70px', width: '360px' } });
+    const dtxt = el('div', 'abs txt', T.difficulty.desc[session.options.difficulty] ?? '', this.ui);
+    Object.assign(dtxt.style, { right: '60px', bottom: '14px', width: '560px', textAlign: 'right', fontSize: '22px', color: '#948068' });
     const hint = el('div', 'abs txt', T.keysHint, this.ui);
     Object.assign(hint.style, { left: '72px', bottom: '22px', fontSize: '24px', color: '#948068' });
     this.detach = attachNav(this.menu);

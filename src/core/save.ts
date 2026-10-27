@@ -16,9 +16,11 @@ export interface Options {
   hints: boolean;
   /** Muestra el minimapa del pasillo. */
   minimap: boolean;
+  /** Dificultad de la próxima partida. */
+  difficulty: 'easy' | 'normal' | 'hard';
 }
 
-export const DEFAULT_OPTIONS: Options = { volume: 0.8, music: 0.7, sfx: 0.9, reduceFlash: false, sensitivity: 1, hints: true, minimap: true };
+export const DEFAULT_OPTIONS: Options = { volume: 0.8, music: 0.7, sfx: 0.9, reduceFlash: false, sensitivity: 1, hints: true, minimap: true, difficulty: 'normal' };
 
 type Store = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -41,6 +43,10 @@ export function loadRun(s: Store | null = store()): RunState | null {
     return {
       ...data,
       mode: data.mode ?? 'campaign',
+      difficulty: data.difficulty ?? 'normal',
+      secret: data.secret ?? false,
+      // una mano de blackjack sin terminar al recargar se pierde (la apuesta ya estaba descontada)
+      pending: 0,
       debt: data.debt ?? 0,
       mortgaged: data.mortgaged ?? false,
       forgiven: data.forgiven ?? false,

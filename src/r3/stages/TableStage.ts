@@ -8,7 +8,7 @@ import { goHub, goPhase } from '../router';
 import { sfx } from '../../audio/sfx';
 import { engine } from '../engine';
 
-const BET: Record<Game, number> = { slots: 50, roulette: 50, race: 100 };
+const BET: Record<Game, number> = { slots: 50, roulette: 50, race: 100, blackjack: 50 };
 
 /** Base de las tres mesas: HUD, apuesta, volver al pasillo, mensaje y cierre de noche. */
 export abstract class TableStage extends Stage {

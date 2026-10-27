@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { canPlayAny } from '../src/core/economy';
-import { ENDLESS, MORTGAGE_RATE, cursesFor, mortgageOffers, nightDef, rankFor, tollFor } from '../src/core/nights';
+import { ENDLESS, MORTGAGE_RATE, actionsFor, cursesFor, mortgageOffers, nightDef, quotaFor, rankFor, tollFor } from '../src/core/nights';
 import { Rng } from '../src/core/rng';
 import { DEFAULT_OPTIONS, clearRun, loadBest, loadOptions, loadRun, saveBest, saveRun } from '../src/core/save';
-import { type RunState, apply, canMortgage, newRun, quotaMet, quotaOf } from '../src/core/state';
+import { type RunState, apply, canMortgage, canStartSecret, newRun, quotaMet, quotaOf, secretReady } from '../src/core/state';
 
 const mem = () => {
   const m = new Map<string, string>();
@@ -244,6 +244,123 @@ describe('estadísticas', () => {
   });
   it('las opciones nuevas tienen valores por defecto', () => {
     expect(DEFAULT_OPTIONS).toMatchObject({ sensitivity: 1, hints: true, minimap: true });
+  });
+});
+
+describe('dificultad', () => {
+  it('escala cuota, acciones, saldo inicial, hipoteca y cobros', () => {
+    expect(quotaFor(2, 'easy')).toBe(1750);
+    expect(quotaFor(2, 'normal')).toBe(2500);
+    expect(quotaFor(2, 'hard')).toBe(3500);
+    expect(actionsFor(1, 'easy')).toBe(24);
+    expect(actionsFor(1, 'hard')).toBe(17);
+    expect(actionsFor(7, 'hard')).toBe(11);
+    expect(newRun(1, 'campaign', 'easy')).toMatchObject({ balance: 700, actionsLeft: 24, difficulty: 'easy' });
+    expect(newRun(1, 'campaign', 'hard')).toMatchObject({ balance: 400, actionsLeft: 17 });
+    expect(newRun(1, 'endless', 'easy').balance).toBe(1500);
+    expect(newRun(1, 'endless', 'hard').balance).toBe(700);
+    expect(mortgageOffers(1, 'easy')[0]).toEqual({ amount: 150, owed: 180 });
+    expect(mortgageOffers(1, 'hard')[0]).toEqual({ amount: 300, owed: 420 });
+    expect(tollFor(0, 1000, 'easy')).toBeLessThan(tollFor(0, 1000, 'normal'));
+    expect(tollFor(0, 1000, 'hard')).toBeGreaterThan(tollFor(0, 1000, 'normal'));
+  });
+  it('la cuota efectiva de la partida usa su dificultad', () => {
+    expect(quotaOf(newRun(1, 'campaign', 'hard'))).toBe(1400);
+    expect(quotaOf(newRun(1, 'campaign', 'easy'))).toBe(700);
+  });
+  it('las noches siguientes usan las acciones de la dificultad', () => {
+    const n = apply({ ...newRun(1, 'campaign', 'easy'), phase: 'dawn', balance: 2000 }, { type: 'nextNight' });
+    expect(n.actionsLeft).toBe(24);
+  });
+  it('un guardado antiguo es de dificultad normal', () => {
+    const m = mem();
+    const old: Partial<RunState> = { ...newRun(3) };
+    delete old.difficulty; delete old.secret;
+    m.setItem('ultima-feria.run', JSON.stringify(old));
+    expect(loadRun(m)).toMatchObject({ difficulty: 'normal', secret: false });
+  });
+});
+
+describe('blackjack en el estado', () => {
+  it('doblar: se acepta el doble de una apuesta válida y se descuenta entero', () => {
+    const s = play(newRun(1));
+    const r = apply(s, { type: 'resolve', game: 'blackjack', bet: 200, payout: 400, rng: s.rng });
+    expect(r.balance).toBe(500 - 200 + 400);
+    expect(r.actionsLeft).toBe(s.actionsLeft - 2);
+    expect(apply(s, { type: 'resolve', game: 'blackjack', bet: 75, payout: 0, rng: s.rng })).toBe(s);
+    expect(apply(s, { type: 'resolve', game: 'slots', bet: 100 * 2 + 1, payout: 0, rng: s.rng })).toBe(s);
+  });
+});
+
+describe('blackjack: repartir y cobrar', () => {
+  it('repartir descuenta apuesta y acciones y guarda la mano pendiente', () => {
+    const s = play(newRun(1));
+    const d = apply(s, { type: 'deal', bet: 100, rng: 7 });
+    expect(d).toMatchObject({ balance: 400, actionsLeft: s.actionsLeft - 2, pending: 100, rng: 7, phase: 'playing' });
+    expect(d.stats).toMatchObject({ plays: 1, wagered: 100 });
+    expect(apply(d, { type: 'deal', bet: 50, rng: 8 })).toBe(d); // no hay dos manos a la vez
+    expect(apply(s, { type: 'deal', bet: 75, rng: 1 })).toBe(s);
+  });
+  it('cobrar suma lo ganado, cuenta la victoria y libera la mano', () => {
+    const d = apply(play(newRun(1)), { type: 'deal', bet: 100, rng: 7 });
+    const c = apply(d, { type: 'collect', chips: 250, extra: 0 }); // blackjack
+    expect(c).toMatchObject({ balance: 650, pending: 0, peak: 650 });
+    expect(c.stats).toMatchObject({ wins: 1, biggestWin: 150, returned: 250 });
+    expect(apply(c, { type: 'collect', chips: 10, extra: 0 })).toBe(c); // ya no hay mano
+  });
+  it('doblar: la apuesta extra se descuenta al cobrar y cuenta como apostada', () => {
+    const d = apply(play(newRun(1)), { type: 'deal', bet: 100, rng: 7 });
+    const win = apply(d, { type: 'collect', chips: 400, extra: 100 });
+    expect(win.balance).toBe(400 - 100 + 400);
+    expect(win.stats).toMatchObject({ wagered: 200, returned: 400, biggestWin: 200 });
+    const lose = apply(d, { type: 'collect', chips: 0, extra: 100 });
+    expect(lose.balance).toBe(300);
+    expect(apply(d, { type: 'collect', chips: 0, extra: 50 })).toBe(d); // solo se puede doblar la apuesta entera
+    expect(apply({ ...d, balance: 50 }, { type: 'collect', chips: 0, extra: 100 }).pending).toBe(100); // sin saldo para doblar
+  });
+  it('quedarse sin fichas al cobrar cierra la noche como en cualquier mesa', () => {
+    const s = { ...play(newRun(1)), balance: 50, actionsLeft: 2 };
+    const d = apply(s, { type: 'deal', bet: 50, rng: 1 });
+    expect(d.phase).toBe('playing'); // no se cierra a mitad de mano
+    expect(apply(d, { type: 'collect', chips: 0, extra: 0 }).phase).toBe('duel');
+  });
+  it('en el modo infinito la mano cuenta para el cobro de la casa', () => {
+    const e = { ...newRun(1, 'endless'), phase: 'playing' as const, plays: 9 };
+    const d = apply(e, { type: 'deal', bet: 50, rng: 1 });
+    expect(d.tolls).toBe(0);
+    expect(apply(d, { type: 'collect', chips: 100, extra: 0 })).toMatchObject({ plays: 10, tolls: 1 });
+  });
+  it('un guardado con una mano a medias la da por perdida', () => {
+    const m = mem();
+    const d = apply(play(newRun(1)), { type: 'deal', bet: 100, rng: 7 });
+    m.setItem('ultima-feria.run', JSON.stringify(d));
+    expect(loadRun(m)).toMatchObject({ pending: 0, balance: 400 });
+  });
+});
+
+describe('duelo secreto de la noche 4', () => {
+  const ready = (over: Partial<RunState> = {}): RunState => ({ ...newRun(1), night: 4, flags: { 'clue-key': true, 'clue-word': true, 'clue-note': true }, ...over });
+  it('solo se puede empezar la noche 4 de la campaña con las tres pistas', () => {
+    expect(secretReady(ready())).toBe(true);
+    expect(canStartSecret(ready())).toBe(true);
+    expect(secretReady(ready({ night: 3 }))).toBe(false);
+    expect(secretReady(ready({ flags: { 'clue-key': true, 'clue-word': true } }))).toBe(false);
+    expect(secretReady({ ...ready(), mode: 'endless' })).toBe(false);
+    const s = ready();
+    expect(apply(s, { type: 'startSecret' })).toMatchObject({ phase: 'duel', secret: true });
+    expect(apply(ready({ night: 3 }), { type: 'startSecret' }).phase).toBe('hub');
+  });
+  it('ganarlo es escapar (final) y perderlo, morir', () => {
+    const duel = apply(ready(), { type: 'startSecret' });
+    const won = apply(duel, { type: 'duelResult', won: true });
+    expect(won).toMatchObject({ phase: 'ending', secret: false });
+    expect(won.flags.escaped).toBe(true);
+    expect(apply(duel, { type: 'duelResult', won: false })).toMatchObject({ phase: 'dead', secret: false });
+  });
+  it('el duelo normal no cambia: ganar perdona la cuota', () => {
+    const won = apply({ ...newRun(1), phase: 'duel' }, { type: 'duelResult', won: true });
+    expect(won.phase).toBe('dawn');
+    expect(won.flags.escaped).toBeUndefined();
   });
 });
 

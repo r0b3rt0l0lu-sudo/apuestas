@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { sfx } from '../../audio/sfx';
-import { brickTex, curtainTex, noiseTex, woodTex } from '../../art/tex3d';
+import { brickTex, curtainTex, woodTex } from '../../art/tex3d';
 import { session } from '../../core/session';
 import { T } from '../../i18n/es';
 import { btn, el } from '../../ui/dom/kit';
@@ -11,8 +11,10 @@ import { engine } from '../engine';
 import { FpsControls } from '../fps';
 import { box, cyl, glow, lam, lampPost, mesh, reelDrum, rouletteTable, sky, slotMachine } from '../models';
 import { goPhase } from '../router';
+import { cv } from '../pixel';
 import { Stage } from '../stage';
 import { stripTexture } from '../strip';
+import * as dec from '../introdecor';
 import { canvasTex, tex } from '../tex';
 import { drawWheel } from '../../art/wheel';
 import { ease } from '../tween';
@@ -43,6 +45,8 @@ export class Intro3D extends Stage {
   private whispered = false;
   private hands: THREE.Group[] = [];
   private detachKeys: () => void = () => undefined;
+  private anims: dec.Anim[] = [];
+  private door!: THREE.Group;
 
   init(): void {
     if (!needsIntro()) { goPhase(); return; }
@@ -101,31 +105,24 @@ export class Intro3D extends Stage {
     return l;
   }
 
+  private get ctx(): { scene: THREE.Scene; solids: Array<{ x: number; z: number; hx: number; hz: number }>; anims: dec.Anim[] } {
+    return { scene: this.scene, solids: this.solids, anims: this.anims };
+  }
+
   private car(color: number, x: number, z: number, ry = 0, lit = false): void {
-    const g = new THREE.Group();
-    const body = lam(color), dark = lam(0x08060a);
-    box(1.9, 0.7, 4.1, body, 0, 0.62, 0, g);
-    box(1.6, 0.62, 2.1, lam(color), 0, 1.25, -0.2, g);
-    box(1.52, 0.46, 2.0, lam(0x10141c, null, { emissive: 0x0a0e16 }), 0, 1.27, -0.2, g); // cristales
-    [[-0.95, 1.3], [0.95, 1.3], [-0.95, -1.3], [0.95, -1.3]].forEach(([wx, wz]) => cyl(0.36, 0.36, 0.26, dark, wx, 0.36, wz, g, 10).rotation.z = Math.PI / 2);
-    box(0.4, 0.16, 0.06, glow(lit ? 0xfff0c0 : 0x3a3440), -0.6, 0.72, 2.07, g);
-    box(0.4, 0.16, 0.06, glow(lit ? 0xfff0c0 : 0x3a3440), 0.6, 0.72, 2.07, g);
-    box(0.4, 0.14, 0.06, glow(0x9c1c20), -0.6, 0.78, -2.07, g);
-    box(0.4, 0.14, 0.06, glow(0x9c1c20), 0.6, 0.78, -2.07, g);
-    g.position.set(x, 0, z);
-    g.rotation.y = ry;
-    this.scene.add(g);
-    this.solids.push({ x, z, hx: 1.05, hz: 2.2 });
+    dec.buildCar(this.ctx, color, x, z, lit, ry);
     if (lit) {
       const l = new THREE.PointLight(0xfff0c0, 10, 14, 1.4);
-      l.position.set(x, 0.9, z - 2.6);
+      l.position.set(x, 0.9, z + 2.6);
       this.addLight(l);
     }
   }
 
   private buildParking(): void {
     const sc = this.scene;
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), lam(0xffffff, tex('asphalt', () => noiseTex('#26202c', 0.14), [10, 10])));
+    const asph = dec.asphaltTex();
+    asph.wrapS = asph.wrapT = THREE.RepeatWrapping; asph.repeat.set(10, 10);
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40), lam(0xffffff, asph));
     ground.rotation.x = -Math.PI / 2;
     ground.position.set(0, 0, 0);
     sc.add(ground);
@@ -144,6 +141,7 @@ export class Intro3D extends Stage {
     this.car(0x5a4a22, -9.3, 2, 0);
     this.car(0x2a2430, 7.7, 2, 0);
     this.car(0x4a1c3a, -1.55, 2.2, 0);
+    this.parkingDetails();
     // farolas
     ([[-4.5, 6.5], [5, 5.5], [-9, -1], [9, -2]] as const).forEach(([x, z], i) => {
       const lp = lampPost(0xe8b868, 18, 20);
@@ -151,6 +149,20 @@ export class Intro3D extends Stage {
       sc.add(lp.group);
       this.lights.push({ l: lp.light, base: 18, flicker: i === 1 ? 2.5 : i === 2 ? 1 : 0.4 });
     });
+  }
+
+  /** Detalles del aparcamiento: charcos, conos, barrera y garita, máquina de refrescos, árboles, valla y lluvia. */
+  private parkingDetails(): void {
+    const c = this.ctx;
+    ([[-1.5, 7.5, 1.6], [3.2, 4.6, 1.2], [-6.5, 5.5, 1.5], [7.5, 6.5, 1.3], [0.8, -3.6, 1.1], [-3.5, 11.5, 1.2]] as const).forEach(([x, z, r]) => dec.puddle(c, x, z, r));
+    ([[-2.6, 3.4], [-2.6, 4.2], [2.9, 8], [10.5, 5.5]] as const).forEach(([x, z]) => dec.cone(c, x, z));
+    dec.barrier(c, 4.0, 11.0);
+    dec.bin(c, -11.6, 6.0); dec.bin(c, 11.8, -2.0);
+    dec.vending(c, -12.6, 0.5, Math.PI / 2);
+    dec.parkingSign(c, -2.4, 12.4); dec.parkingSign(c, 8.5, 0.8);
+    ([[-12.5, 13, 1.1], [12.5, 13, 1.0], [-12.8, -3, 1.2], [12.8, 3, 0.9]] as const).forEach(([x, z, k]) => dec.tree(c, x, z, k));
+    dec.fence(c, -13.4, -5.5, 15); dec.fence(c, 13.4, -5.5, 15);
+    dec.rain(c, 520);
   }
 
   // ---------- fachada ----------
@@ -171,6 +183,20 @@ export class Intro3D extends Stage {
     awn.rotation.x = 0.12;
     cyl(0.05, 0.05, 3.8, lam(0xc4a050), -2.5, 1.9, FRONT_Z + 2.4, sc, 6);
     cyl(0.05, 0.05, 3.8, lam(0xc4a050), 2.5, 1.9, FRONT_Z + 2.4, sc, 6);
+    // ventanas con luz, columnas, alfombra roja con cuerdas y puerta giratoria
+    const wt = dec.windowsTex();
+    for (const x of [-8, 8]) { const m = new THREE.Mesh(new THREE.PlaneGeometry(10.6, 3.9), new THREE.MeshBasicMaterial({ map: wt, transparent: true })); m.position.set(x, 5.2, FRONT_Z + 0.37); sc.add(m); }
+    for (const x of [-3.2, 3.2]) { box(0.7, 4.0, 0.7, lam(0x2e1018), x, 2.0, FRONT_Z + 0.55, sc); box(0.95, 0.2, 0.95, lam(0xc4a050), x, 4.1, FRONT_Z + 0.55, sc); box(0.95, 0.2, 0.95, lam(0xc4a050), x, 0.1, FRONT_Z + 0.55, sc); }
+    const carpet = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 7), lam(0x7a1428, null, { emissive: 0x200610 }));
+    carpet.rotation.x = -Math.PI / 2; carpet.position.set(0, 0.03, FRONT_Z + 4.0); sc.add(carpet);
+    for (const x of [-1.35, 1.35]) box(0.08, 0.04, 7, lam(0xc4a050), x, 0.04, FRONT_Z + 4.0, sc);
+    for (const sx of [-1.5, 1.5]) for (let i = 0; i < 2; i++) { const z0 = FRONT_Z + 1.5 + i * 2.2; cyl(0.04, 0.05, 0.95, lam(0xc4a050), sx, 0.48, z0, sc, 5); cyl(0.04, 0.05, 0.95, lam(0xc4a050), sx, 0.48, z0 + 1.6, sc, 5); box(0.05, 0.06, 1.6, lam(0x7a1428), sx, 0.85, z0 + 0.8, sc); }
+    this.door = new THREE.Group();
+    this.door.position.set(0, 1.7, FRONT_Z + 0.2);
+    for (let i = 0; i < 4; i++) { const pane = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 3.2), new THREE.MeshBasicMaterial({ color: 0x6a8aa8, transparent: true, opacity: 0.22, side: THREE.DoubleSide })); pane.rotation.y = (i * Math.PI) / 2; pane.position.set(0, 0, 0); this.door.add(pane); }
+    sc.add(this.door);
+    dec.bulbFrame(this.ctx, 0, 7.4, FRONT_Z + 0.5, 10.2, 3.1);
+    dec.bulbFrame(this.ctx, 0, 3.7, FRONT_Z + 2.45, 5.0, 0.01, 0xfff0c0);
     // la luz del vestíbulo se derrama por la puerta
     const spill = new THREE.PointLight(0xffb060, 26, 15, 1.3);
     spill.position.set(0, 2.6, FRONT_Z + 1);
@@ -203,7 +229,9 @@ export class Intro3D extends Stage {
   private buildLobby(): void {
     const sc = this.scene;
     const w = 20, d = FRONT_Z - BACK_Z, h = 5.2, cz = (FRONT_Z + BACK_Z) / 2;
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lam(0xffffff, tex('lobby-carpet', () => woodTex('#3a1018'), [8, 9])));
+    const carp = dec.carpetTex();
+    carp.wrapS = carp.wrapT = THREE.RepeatWrapping; carp.repeat.set(10, 9);
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(w, d), lam(0xffffff, carp));
     floor.rotation.x = -Math.PI / 2;
     floor.position.set(0, 0.01, cz);
     sc.add(floor);
@@ -249,6 +277,20 @@ export class Intro3D extends Stage {
       cyl(0.32, 0.36, h, lam(0x3a2418, tex('lobby-col', () => woodTex('#3a2418'), [1, 3])), x, h / 2, z, sc, 8);
       this.solids.push({ x, z, hx: 0.36, hz: 0.36 });
     }));
+    // más vida en el vestíbulo: lámparas de araña, taburetes, caja, barra, plantas, cuerdas, cámaras y cartel de premio
+    const c = this.ctx;
+    ([-9, -15, -21] as const).forEach((z) => dec.chandelier(c, 0, 3.9, z));
+    for (let i = 0; i < 5; i++) for (const side of [-1, 1] as const) dec.stool(c, side * 7.3, -9 - i * 3);
+    dec.cage(c, 6.2, -7.2);
+    dec.bar(c, -8.2, -19.0, -23.0);
+    dec.plant(c, -2.6, -6.9); dec.plant(c, 2.6, -6.9); dec.plant(c, 8.4, -23); dec.plant(c, -8.4, -7.4);
+    dec.rope(c, -2.0, 2.0, -11.0);
+    dec.camera(c, -9.4, 4.5, -7.0, 0.6); dec.camera(c, 9.4, 4.5, -23.0, Math.PI + 0.6);
+    const jack = cv(64, 16, (g) => { g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = "16px 'Special Elite', serif"; g.shadowColor = '#e8d27a'; g.shadowBlur = 5; g.fillStyle = '#ffe08a'; g.fillText('JACKPOT', 32, 8); });
+    const jm = new THREE.Mesh(new THREE.PlaneGeometry(6, 1.5), new THREE.MeshBasicMaterial({ map: jack, transparent: true }));
+    jm.position.set(0, 3.9, BACK_Z + 0.3); sc.add(jm);
+    dec.bulbFrame(c, 0, 3.9, BACK_Z + 0.35, 6.6, 1.8);
+    for (let i = 0; i < 6; i++) for (const x of [-9.7, 9.7] as const) { box(0.1, 0.3, 0.4, glow(0xe8b868), x, 3.6, -8.5 - i * 2.4, sc); }
     // lámparas del techo
     ([-8, -14, -20] as const).forEach((z, i) => {
       mesh(new THREE.SphereGeometry(0.16, 8, 6), glow(0xf0d890), 0, h - 0.5, z, sc);
@@ -291,6 +333,8 @@ export class Intro3D extends Stage {
     this.cob.setGaze(0, 0);
     this.cob.update(dt);
     this.cig.update(dt, t);
+    this.anims.forEach((f) => f(dt, t));
+    if (this.door) this.door.rotation.y = t * 0.8;
     if (this.cut) return;
     this.fps.update(dt);
     const z = this.fps.pos.z;

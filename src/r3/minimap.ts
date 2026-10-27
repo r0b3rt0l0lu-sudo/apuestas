@@ -11,7 +11,7 @@ const ROOMS: Array<{ id: string; x0: number; x1: number; z0: number; z1: number 
   { id: 'archive', x0: -9.6, x1: -0.8, z0: -17.6, z1: -8.6 }
 ];
 const DOORS = [[-6.8, -1.5, false], [6.8, 1.8, false], [-5.2, -8.6, true], [0, 6.6, true]] as const;
-const MARKS = [['#e8d27a', -5.9, 1.0], ['#c24a3a', -1.1, -4.0], ['#76895a', 4.4, -3.4], ['#ece0c0', 0, -7.5]] as const;
+const MARKS = [['#e8d27a', -5.9, 1.0], ['#c24a3a', -1.1, -4.0], ['#76895a', 4.4, -3.4], ['#8a6a34', 2.2, 4.4], ['#ece0c0', 0, -7.5]] as const;
 
 const cx = (x: number): number => Math.round((x - X0) * S);
 const cz = (z: number): number => Math.round((z - Z0) * S);
